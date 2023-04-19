@@ -58,15 +58,15 @@ void comp_domain::readfile_domains() {
 		W >> mat >> x1 >> x2 >> y1 >> y2;
 		domains[i].first.x = coords[x1].x;
 		domains[i].first.y = coords[y1].y;
-		domains[i].second.x = coords[x1].x;
-		domains[i].second.y = coords[y1].y;
+		domains[i].second.x = coords[x2].x;
+		domains[i].second.y = coords[y2].y;
 	}
 	W.close();
 }
 
 bool comp_domain::is_contain(const Point& node) {
 	for (size_t i = 0; i < domains.size(); i++) {
-		if ((node.x >= domains[i].first.x) && (node.x >= domains[i].second.x) && (node.y >= domains[i].first.y) && (node.y >= domains[i].second.y))
+		if ((node.x >= domains[i].first.x) && (node.x <= domains[i].second.x) && (node.y >= domains[i].first.y) && (node.y <= domains[i].second.y+1))
 			return true;
 	}
 	return false;
@@ -196,3 +196,77 @@ void Mesh::output(const string& filename, const vector<Element>& elements) {
 	}
 	out.close();
 }
+
+vector<Point> Mesh::edit_nodes(vector<Point>& nodes) {
+	Mesh NewMesh;
+	bool is_remove_node = false;
+	int removed_nodes = 0;
+	num_nodes_in_new_mesh.resize(nodes.size());
+	fill(num_nodes_in_new_mesh.begin(), num_nodes_in_new_mesh.end(), 0);
+	// помечаем узлы на удаление
+	for (size_t i = 0; i < nodes.size(); i++) {
+		is_remove_node = !subdomain.is_contain(nodes[i]);
+		if (is_remove_node) {
+			nodes[i].num = 0;
+		}
+	}
+	for (size_t i = 0; i < nodes.size(); i++) {
+		if (nodes[i].num == 0) {
+			removed_nodes++;
+			continue;
+		}
+		else {
+			NewMesh.nodes.push_back(nodes[i]);
+			NewMesh.nodes[NewMesh.nodes.size() - 1].num -= removed_nodes;
+			num_nodes_in_new_mesh[nodes[i].num - 1] = nodes[i].num - removed_nodes;
+		}
+	}
+	return NewMesh.nodes;
+}
+
+vector<Element> Mesh::edit_elements(vector<Element>& elements) {
+	Mesh NewMesh;
+	uint32_t old_num_node;
+	uint32_t new_num_node;
+	uint32_t removed_nodes = 0;;
+	uint32_t removed_elements = 0;
+	bool is_remove_elem;
+	// помечаем элементы на удаление
+	for (size_t i = 0; i < elements.size(); i++) {
+		is_remove_elem = false;
+		for (size_t j = 0; j < 4; j++) {
+			is_remove_elem = !subdomain.is_contain(elements[i].loc_nodes[j]);
+			if (is_remove_elem) {
+				is_remove_elem = true;
+				elements[i].material = 0;
+				break;
+			}
+		}
+	}
+	for (size_t i = 0; i < elements.size(); i++) {
+		if (elements[i].material == 0) {
+			for (size_t j = 2; j < 4; j++) {
+				if (!subdomain.is_contain(elements[i].loc_nodes[j])) {
+					removed_nodes++;
+					break;
+				}
+			}
+			removed_elements++;
+		}
+		else {
+			NewMesh.elements.push_back(elements[i]);
+			NewMesh.elements[NewMesh.elements.size() - 1].num -= removed_elements;
+			for (size_t j = 0; j < 4; j++) {
+				old_num_node = NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num;
+				new_num_node = num_nodes_in_new_mesh[old_num_node - 1];
+				NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num = new_num_node;
+			}
+		}
+	}
+	return NewMesh.elements;
+
+	
+}
+
+
+

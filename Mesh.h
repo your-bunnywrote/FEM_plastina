@@ -51,6 +51,8 @@ public:
 				ny;
 	vector<double> kx,	// коэффициенты разрядки
 				   ky;
+	vector<int> num_nodes_in_new_mesh;	// содержит новую нумерацию узлов, индекс этого узла (с нуля) - номер узла до удаления
+										// а значение - номер узла после удаления
 	void readfile_partition_info();	// чтение информации о разбиениии подобластей на элементы
 	// считаем координаты узлов с учетом коэффициента разрядки
 	vector<double> calc_nodes_x_coords(const vector<double>& k, const vector<int>& n, vector<Point>& coordXw);
