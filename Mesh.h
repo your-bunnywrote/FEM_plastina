@@ -55,8 +55,8 @@ public:
 	// считаем координаты узлов с учетом коэффициента разрядки
 	vector<double> calc_nodes_x_coords(const vector<double>& k, const vector<int>& n, vector<Point>& coordXw);
 	vector<double> calc_nodes_y_coords(const vector<double>& k, const vector<int>& n, vector<Point>& coordYw);
-	void fill_nodes();
-	void fill_elements();
+	vector<Point> fill_nodes();
+	vector<Element> fill_elements();
 	vector<Point> edit_nodes(vector<Point>& nodes);
 	vector<Element> edit_elements(vector<Element>& elements);
 	void output(const string& filename);

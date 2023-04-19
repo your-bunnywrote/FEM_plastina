@@ -137,7 +137,7 @@ vector<double> Mesh::calc_nodes_y_coords(const vector<double>& k, const vector<i
 	return y;
 }
 
-void Mesh::fill_nodes() {
+vector<Point> Mesh::fill_nodes() {
 	readfile_partition_info();
 	vector<double> x = calc_nodes_x_coords(kx, nx, subdomain.coords);
 	vector<double> y = calc_nodes_y_coords(ky, ny, subdomain.coords);
@@ -151,10 +151,11 @@ void Mesh::fill_nodes() {
 			nodenum++;
 		}
 	}
+	return nodes;
 }
 
-void Mesh::fill_elements() {
-	readfile_partition_info();
+vector<Element> Mesh::fill_elements() {
+	//readfile_partition_info();
 	vector<double> x = calc_nodes_x_coords(kx, nx, subdomain.coords);
 	vector<double> y = calc_nodes_y_coords(ky, ny, subdomain.coords);
 	Element el;
@@ -171,10 +172,10 @@ void Mesh::fill_elements() {
 			elemnum++;
 		}
 	}
+	return elements;
 }
 
-void Mesh::output(const string& filename) {
-	fill_nodes();
+void Mesh::output(const string& filename, const vector<Point>& nodes) {
 	ofstream out;
 	out.open(filename);
 	for (size_t i = 0; i < nodes.size(); i++) {
@@ -184,7 +185,6 @@ void Mesh::output(const string& filename) {
 }
 
 void Mesh::output(const string& filename, const vector<Element>& elements) {
-	fill_elements();
 	ofstream out;
 	out.open(filename);
 	for (size_t i = 0; i < elements.size(); i++) {
