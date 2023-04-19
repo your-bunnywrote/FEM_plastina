@@ -59,8 +59,8 @@ public:
 	vector<double> calc_nodes_y_coords(const vector<double>& k, const vector<int>& n, vector<Point>& coordYw);
 	vector<Point> fill_nodes();
 	vector<Element> fill_elements();
-	vector<Point> edit_nodes(vector<Point>& nodes);
-	vector<Element> edit_elements(vector<Element>& elements);
+	void edit_nodes(vector<Point>& nodes);
+	void edit_elements(vector<Element>& elements);
 	void output(const string& filename);
 	void output(const string& filename, const vector<Point>& nodes);
 	void output(const string& filename, const vector<Element>& elements);

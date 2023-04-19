@@ -197,7 +197,7 @@ void Mesh::output(const string& filename, const vector<Element>& elements) {
 	out.close();
 }
 
-vector<Point> Mesh::edit_nodes(vector<Point>& nodes) {
+void Mesh::edit_nodes(vector<Point>& nodes) {
 	Mesh NewMesh;
 	bool is_remove_node = false;
 	int removed_nodes = 0;
@@ -221,10 +221,10 @@ vector<Point> Mesh::edit_nodes(vector<Point>& nodes) {
 			num_nodes_in_new_mesh[nodes[i].num - 1] = nodes[i].num - removed_nodes;
 		}
 	}
-	return NewMesh.nodes;
+	nodes = NewMesh.nodes;
 }
 
-vector<Element> Mesh::edit_elements(vector<Element>& elements) {
+void Mesh::edit_elements(vector<Element>& elements) {
 	Mesh NewMesh;
 	uint32_t old_num_node;
 	uint32_t new_num_node;
@@ -243,6 +243,8 @@ vector<Element> Mesh::edit_elements(vector<Element>& elements) {
 			}
 		}
 	}
+	
+	// перенумерация локальных узлов элементов
 	for (size_t i = 0; i < elements.size(); i++) {
 		if (elements[i].material == 0) {
 			for (size_t j = 2; j < 4; j++) {
@@ -263,7 +265,7 @@ vector<Element> Mesh::edit_elements(vector<Element>& elements) {
 			}
 		}
 	}
-	return NewMesh.elements;
+	elements = NewMesh.elements;
 
 	
 }
