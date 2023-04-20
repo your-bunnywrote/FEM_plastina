@@ -82,7 +82,11 @@ void Mesh::readfile_partition_info() {
 	while (getline(Xmsh, line)) {
 		vector<string> tokens = split(line, '\t');
 		nx.push_back(stoi(tokens.at(0)));
-		kx.push_back(stod(tokens.at(1)));
+		kx.push_back(stod(tokens.at(1)));	// k>0 - каждый следующий интервал больше предыдущего в k раз
+											// k<0 - каждый следующий интервал меньше предыдущего в k раз (т. е. больше предыдущего в 1/k раз)
+		if (kx[kx.size() - 1] < 0) {
+			kx[kx.size() - 1] = 1 / abs(kx[kx.size() - 1]);
+		}
 	}
 	Xmsh.close();
 	line.clear();
@@ -91,6 +95,9 @@ void Mesh::readfile_partition_info() {
 		vector<string> tokens = split(line, '\t');
 		ny.push_back(stoi(tokens.at(0)));
 		ky.push_back(stod(tokens.at(1)));
+		if (ky[ky.size() - 1] < 0) {
+			ky[ky.size() - 1] = 1 / abs(ky[ky.size() - 1]);
+		}
 	}
 	Ymsh.close();
 	line.clear();
