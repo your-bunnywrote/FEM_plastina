@@ -1,3 +1,5 @@
+// Mesh.cpp - определение всех функций и операторов, модуль дл€ построени€ сетки
+
 #include "Mesh.h"
 
 vector<string> split(string& s, char delimeter) {
@@ -26,11 +28,50 @@ Point::Point(double x, double y, int num) {
 	this->num = num;
 }
 
+Point Point::operator*(double t) {
+	double x_res, y_res;
+	x_res = x * t;
+	y_res = y * t;
+	return Point(x_res, y_res);
+}
+
+Point Point::operator+(Point p) {
+	double x_res, y_res;
+	x_res = x + p.x;
+	y_res = y + p.y;
+	return Point(x_res, y_res);
+}
+
+Point Point::operator-(Point p) {
+	double x_res, y_res;
+	x_res = x - p.x;
+	y_res = y - p.y;
+	return Point(x_res, y_res);
+}
+
+Point Point::operator+(double val) {
+	double res_x, res_y;
+	res_x = x + val;
+	res_y = y + val;
+	return Point(res_x, res_y);
+}
+
+Point Point::operator/(double val) {
+	double res_x, res_y;
+	res_x = x / val;
+	res_y = y / val;
+	return Point(res_x, res_y);
+}
+
+Element::Element() {
+	loc_nodes.resize(4);
+}
+
 //========================================================================
 
 void comp_domain::readfile_domains() {
 	ifstream W;
-	W.open(".\\text_files\\subdomains.txt");
+	W.open("test\\subdomains.txt");
 
 	W >> Nx;
 	double x;
@@ -66,196 +107,167 @@ void comp_domain::readfile_domains() {
 
 bool comp_domain::is_contain(const Point& node) {
 	for (size_t i = 0; i < domains.size(); i++) {
-		if ((node.x >= domains[i].first.x) && (node.x <= domains[i].second.x) && (node.y >= domains[i].first.y) && (node.y <= domains[i].second.y+1))
+		if ((node.x >= domains[i].first.x) && (node.x <= domains[i].second.x + 1) && (node.y >= domains[i].first.y) && (node.y <= domains[i].second.y+1)) // единички к крайним координатам подобласти прибавл€ютс€ дл€ того
+																																						  // чтобы "хвостик" у координаты узла не считалс€ вылетевшим за узел
+																																						  // !!!  ќ—“џЋ№
 			return true;
 	}
 	return false;
 }
 
+bool comp_domain::is_match(const Point& node) {
+
+	return false;
+}
+
 // =======================================================================
 
-void Mesh::readfile_partition_info() {
-	subdomain.readfile_domains();
+void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
+	// информаци€ о разбиении областей
+	mesh.subdomain.readfile_domains();
 	ifstream Xmsh, Ymsh;
-	Xmsh.open(".\\text_files\\partition_info_x.txt");
+	// x
+	Xmsh.open("test\\partition_info_x.txt");
 	string line;
 	while (getline(Xmsh, line)) {
 		vector<string> tokens = split(line, '\t');
-		nx.push_back(stoi(tokens.at(0)));
-		kx.push_back(stod(tokens.at(1)));	// k>0 - каждый следующий интервал больше предыдущего в k раз
-											// k<0 - каждый следующий интервал меньше предыдущего в k раз (т. е. больше предыдущего в 1/k раз)
-		if (kx[kx.size() - 1] < 0) {
-			kx[kx.size() - 1] = 1 / abs(kx[kx.size() - 1]);
+		mesh.nx.push_back(stoi(tokens.at(0)));
+		mesh.kx.push_back(stod(tokens.at(1)));		// k>0 - каждый следующий интервал больше предыдущего в k раз
+													// k<0 - каждый следующий интервал меньше предыдущего в k раз (т. е. больше предыдущего в 1/k раз)
+		if (mesh.kx[mesh.kx.size() - 1] < 0) {
+			mesh.kx[mesh.kx.size() - 1] = 1 / abs(mesh.kx[mesh.kx.size() - 1]);
 		}
 	}
 	Xmsh.close();
 	line.clear();
-	Ymsh.open(".\\text_files\\partition_info_y.txt");
+	// y
+	Ymsh.open("test\\partition_info_y.txt");
 	while (getline(Ymsh, line)) {
 		vector<string> tokens = split(line, '\t');
-		ny.push_back(stoi(tokens.at(0)));
-		ky.push_back(stod(tokens.at(1)));
-		if (ky[ky.size() - 1] < 0) {
-			ky[ky.size() - 1] = 1 / abs(ky[ky.size() - 1]);
+		mesh.ny.push_back(stoi(tokens.at(0)));
+		mesh.ky.push_back(stod(tokens.at(1)));
+		if (mesh.ky[mesh.ky.size() - 1] < 0) {
+			mesh.ky[mesh.ky.size() - 1] = 1 / abs(mesh.ky[mesh.ky.size() - 1]);
 		}
 	}
 	Ymsh.close();
 	line.clear();
-}
-
-vector<double> Mesh::calc_nodes_x_coords(const vector<double>& k, const vector<int>& n, vector<Point>& coordXw) {
-	vector<double> x;
-	double h, sum;
-	x.resize(accumulate(n.begin(), n.end(), 0) + 1);
-	for (size_t j = 0; j < n.size(); j++) {
+	// считаем координаты узлов
+	// по x
+	vector<double> x, y;
+	double hx, hy, sum;
+	x.resize(accumulate(mesh.nx.begin(), mesh.nx.end(), 0) + 1);
+	for (size_t j = 0; j < mesh.nx.size(); j++) {
 		sum = 0;
-		int g_index = accumulate(n.begin(), n.begin() + j, 0);
-		for (int i = 0; i < n[j]; i++) {
-			sum += pow(k[j], i);
+		int g_index = accumulate(mesh.nx.begin(), mesh.nx.begin() + j, 0);
+		for (int i = 0; i < mesh.nx[j]; i++) {
+			sum += pow(mesh.kx[j], i);
 		}
-		h = (coordXw[j + 1].x - coordXw[j].x) / sum;
-		x[g_index] = coordXw[j].x;
-		for (int i = 1; i <= n[j]; i++) {
-			x[i + g_index] = x[i - 1 + g_index] + h;
-			h *= k[j];
+		hx = (mesh.subdomain.coords[j + 1].x - mesh.subdomain.coords[j].x) / sum;
+		x[g_index] = (mesh.subdomain.coords[j].x);
+		for (int i = 1; i <= mesh.nx[j]; i++) {
+			x[i + g_index] = x[i - 1 + g_index] + hx;
+			hx *= mesh.kx[j];
 		}
+		x[g_index + mesh.nx[j]] = mesh.subdomain.coords[j+1].x;	// округл€ем посчитанную координату узла на границе подобластей до точной координаты границы (чтобы избежать значени€ в формате .000000001)
 	}
-	return x;
-}
-
-vector<double> Mesh::calc_nodes_y_coords(const vector<double>& k, const vector<int>& n, vector<Point>& coordYw) {
-	vector<double> y;
-	double h, sum;
-
-	y.resize(accumulate(n.begin(), n.end(), 0) + 1);
-	for (int j = 0; j < n.size(); j++) {
+	// по y
+	y.resize(accumulate(mesh.ny.begin(), mesh.ny.end(), 0) + 1);
+	for (size_t j = 0; j < mesh.ny.size(); j++) {
 		sum = 0;
-		int g_index = accumulate(n.begin(), n.begin() + j, 0);
-		for (int i = 0; i < n[j]; i++) {
-			sum += pow(k[j], i);
+		int g_index = accumulate(mesh.ny.begin(), mesh.ny.begin() + j, 0);
+		for (int i = 0; i < mesh.ny[j]; i++) {
+			sum += pow(mesh.ky[j], i);
 		}
-		h = (coordYw[j + 1].y - coordYw[j].y) / sum;
-		y[g_index] = coordYw[j].y;
-		for (int i = 1; i <= n[j]; i++) {
-			y[i + g_index] = y[i - 1 + g_index] + h;
-			h *= k[j];
+		hy = (mesh.subdomain.coords[j + 1].y - mesh.subdomain.coords[j].y) / sum;
+		y[g_index] = (mesh.subdomain.coords[j].y);
+		for (int i = 1; i <= mesh.ny[j]; i++) {
+			y[i + g_index] = y[i - 1 + g_index] + hy;
+			hy *= mesh.ky[j];
 		}
+		y[g_index + mesh.ny[j]] = mesh.subdomain.coords[j + 1].y;
 	}
-	return y;
-}
 
-vector<Point> Mesh::fill_nodes() {
-	readfile_partition_info();
-	vector<double> x = calc_nodes_x_coords(kx, nx, subdomain.coords);
-	vector<double> y = calc_nodes_y_coords(ky, ny, subdomain.coords);
-	nodes.resize(x.size() * y.size());
+	// заполн€ем вектор узлов
+	mesh.nodes.resize(x.size() * y.size());
 	size_t nodenum = 0;
 	for (size_t j = 0; j < y.size(); j++) {
 		for (size_t i = 0; i < x.size(); i++) {
-			nodes[i + j * x.size()].x = x[i];
-			nodes[i + j * x.size()].y = y[j];
-			nodes[i + j * x.size()].num = nodenum + 1;
+			mesh.nodes[i + j * x.size()].x = x[i];
+			mesh.nodes[i + j * x.size()].y = y[j];
+			mesh.nodes[i + j * x.size()].num = nodenum + 1;
 			nodenum++;
 		}
 	}
-	return nodes;
-}
 
-vector<Element> Mesh::fill_elements() {
-	//readfile_partition_info();
-	vector<double> x = calc_nodes_x_coords(kx, nx, subdomain.coords);
-	vector<double> y = calc_nodes_y_coords(ky, ny, subdomain.coords);
+
+
+	// заполн€ем вектор элементов
 	Element el;
 	size_t elemnum = 0;
-	elements.resize((x.size() - 1) * (y.size() - 1));
+	mesh.elements.resize((x.size() - 1) * (y.size() - 1));
 	for (size_t j = 0; j < y.size() - 1; j++) {
 		for (size_t i = 0; i < x.size() - 1; i++) {
-			elements[i + j * (x.size() - 1)].loc_nodes[0] = Point(x[i], y[j], nodes[i + j * x.size()].num);
-			elements[i + j * (x.size() - 1)].loc_nodes[1] = Point(x[i + 1], y[j], nodes[i + 1 + j * x.size()].num);
-			elements[i + j * (x.size() - 1)].loc_nodes[2] = Point(x[i + 1], y[j + 1], nodes[i + 1 + (j + 1) * x.size()].num);
-			elements[i + j * (x.size() - 1)].loc_nodes[3] = Point(x[i], y[j + 1], nodes[i + (j + 1) * x.size()].num);
-			elements[i + j * (x.size() - 1)].material = 1;
-			elements[i + j * (x.size() - 1)].num = elemnum + 1;
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[0] = Point(x[i], y[j], mesh.nodes[i + j * x.size()].num);
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[1] = Point(x[i + 1], y[j], mesh.nodes[i + 1 + j * x.size()].num);
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[2] = Point(x[i + 1], y[j + 1], mesh.nodes[i + 1 + (j + 1) * x.size()].num);
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[3] = Point(x[i], y[j + 1], mesh.nodes[i + (j + 1) * x.size()].num);
+			mesh.elements[i + j * (x.size() - 1)].mat.num = 1;
+			mesh.elements[i + j * (x.size() - 1)].num = elemnum + 1;
 			elemnum++;
 		}
 	}
-	return elements;
-}
-
-void Mesh::output(const string& filename, const vector<Point>& nodes) {
-	ofstream out;
-	out.open(filename);
-	for (size_t i = 0; i < nodes.size(); i++) {
-		out << nodes[i].num << "\t" << nodes[i].x << "\t" << nodes[i].y << "\n";
-	}
-	out.close();
-}
-
-void Mesh::output(const string& filename, const vector<Element>& elements) {
-	ofstream out;
-	out.open(filename);
-	for (size_t i = 0; i < elements.size(); i++) {
-		out << elements[i].num;
-		for (size_t j = 0; j < 4; j++) {
-			out << "\t" << elements[i].loc_nodes[j].num;
-		}
-		out << "\n";
-	}
-	out.close();
-}
-
-void Mesh::edit_nodes(vector<Point>& nodes) {
+	// учет пустот в геометрии: удаление ненужных узлов и элементов, их перенумераци€
+	// удаление узлов и перенумераци€ оставшихс€
 	Mesh NewMesh;
 	bool is_remove_node = false;
-	int removed_nodes = 0;
-	num_nodes_in_new_mesh.resize(nodes.size());
-	fill(num_nodes_in_new_mesh.begin(), num_nodes_in_new_mesh.end(), 0);
+	uint32_t removed_nodes = 0;
+	mesh.num_nodes_in_new_mesh.resize(mesh.nodes.size());
+	fill(mesh.num_nodes_in_new_mesh.begin(), mesh.num_nodes_in_new_mesh.end(), 0);
 	// помечаем узлы на удаление
-	for (size_t i = 0; i < nodes.size(); i++) {
-		is_remove_node = !subdomain.is_contain(nodes[i]);
+	for (size_t i = 0; i < mesh.nodes.size(); i++) {
+		is_remove_node = !mesh.subdomain.is_contain(mesh.nodes[i]);
 		if (is_remove_node) {
-			nodes[i].num = 0;
+			mesh.nodes[i].num = 0;
 		}
 	}
-	for (size_t i = 0; i < nodes.size(); i++) {
-		if (nodes[i].num == 0) {
+	for (size_t i = 0; i < mesh.nodes.size(); i++) {
+		if (mesh.nodes[i].num == 0) {
 			removed_nodes++;
 			continue;
 		}
 		else {
-			NewMesh.nodes.push_back(nodes[i]);
+			NewMesh.nodes.push_back(mesh.nodes[i]);
 			NewMesh.nodes[NewMesh.nodes.size() - 1].num -= removed_nodes;
-			num_nodes_in_new_mesh[nodes[i].num - 1] = nodes[i].num - removed_nodes;
+			mesh.num_nodes_in_new_mesh[mesh.nodes[i].num - 1] = mesh.nodes[i].num - removed_nodes;
 		}
 	}
-	nodes = NewMesh.nodes;
-}
+	mesh.nodes = NewMesh.nodes;
 
-void Mesh::edit_elements(vector<Element>& elements) {
-	Mesh NewMesh;
+	// удаление лишних элементов, перенумераци€ оставшихс€ и перенумераци€ локальных узлов с учетом удаленных
+	removed_nodes = 0;
 	uint32_t old_num_node;
 	uint32_t new_num_node;
-	uint32_t removed_nodes = 0;;
 	uint32_t removed_elements = 0;
 	bool is_remove_elem;
 	// помечаем элементы на удаление
-	for (size_t i = 0; i < elements.size(); i++) {
+	for (size_t i = 0; i < mesh.elements.size(); i++) {
 		is_remove_elem = false;
 		for (size_t j = 0; j < 4; j++) {
-			is_remove_elem = !subdomain.is_contain(elements[i].loc_nodes[j]);
+			is_remove_elem = !mesh.subdomain.is_contain(mesh.elements[i].loc_nodes[j]);
 			if (is_remove_elem) {
 				is_remove_elem = true;
-				elements[i].material = 0;
+				mesh.elements[i].mat.num = 0;
 				break;
 			}
 		}
 	}
-	
+
 	// перенумераци€ локальных узлов элементов
-	for (size_t i = 0; i < elements.size(); i++) {
-		if (elements[i].material == 0) {
+	for (size_t i = 0; i < mesh.elements.size(); i++) {
+		if (mesh.elements[i].mat.num == 0) {
 			for (size_t j = 2; j < 4; j++) {
-				if (!subdomain.is_contain(elements[i].loc_nodes[j])) {
+				if (!mesh.subdomain.is_contain(mesh.elements[i].loc_nodes[j])) {
 					removed_nodes++;
 					break;
 				}
@@ -263,19 +275,38 @@ void Mesh::edit_elements(vector<Element>& elements) {
 			removed_elements++;
 		}
 		else {
-			NewMesh.elements.push_back(elements[i]);
+			NewMesh.elements.push_back(mesh.elements[i]);
 			NewMesh.elements[NewMesh.elements.size() - 1].num -= removed_elements;
 			for (size_t j = 0; j < 4; j++) {
 				old_num_node = NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num;
-				new_num_node = num_nodes_in_new_mesh[old_num_node - 1];
+				new_num_node = mesh.num_nodes_in_new_mesh[old_num_node - 1];
 				NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num = new_num_node;
 			}
 		}
 	}
-	elements = NewMesh.elements;
+	mesh.elements = NewMesh.elements;
 
-	
+	// выгружаем данные сетки в файлы
+	ofstream out;
+	out.open(filename_nodes);
+	for (size_t i = 0; i < mesh.nodes.size(); i++) {
+		out << mesh.nodes[i].num << "\t" << mesh.nodes[i].x << "\t" << mesh.nodes[i].y << "\n";
+	}
+	out.close();
+	out.clear();
+	out.open(filename_elements);
+	for (size_t i = 0; i < mesh.elements.size(); i++) {
+		out << mesh.elements[i].num;
+		for (size_t j = 0; j < 4; j++) {
+			out << "\t" << mesh.elements[i].loc_nodes[j].num;
+		}
+		out << "\n";
+	}
+	out.close();
+	out.clear();
 }
+
+
 
 
 
