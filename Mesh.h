@@ -40,7 +40,6 @@ public:
 	vector<pair<Point, Point >> domains;	// содержит пару поинтов - противоположные углы прямоугольника (x1,y1) и (x2,y2)
 	void readfile_domains();
 	bool is_contain(const Point& node);	// проверяет, попадает ли узел в истинную подобласть
-	bool is_match(const Point& node);	// проверяет, лежит ли узел на прямой
 };
 
 struct Material {

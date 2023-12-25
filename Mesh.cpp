@@ -107,18 +107,13 @@ void comp_domain::readfile_domains() {
 
 bool comp_domain::is_contain(const Point& node) {
 	for (size_t i = 0; i < domains.size(); i++) {
-		if ((node.x >= domains[i].first.x) && (node.x <= domains[i].second.x + 1) && (node.y >= domains[i].first.y) && (node.y <= domains[i].second.y+1)) // единички к крайним координатам подобласти прибавл€ютс€ дл€ того
-																																						  // чтобы "хвостик" у координаты узла не считалс€ вылетевшим за узел
-																																						  // !!!  ќ—“џЋ№
+		if ((node.x >= domains[i].first.x) && (node.x <= domains[i].second.x + 1) && (node.y >= domains[i].first.y) && (node.y <= domains[i].second.y)) 
 			return true;
 	}
 	return false;
 }
 
-bool comp_domain::is_match(const Point& node) {
 
-	return false;
-}
 
 // =======================================================================
 

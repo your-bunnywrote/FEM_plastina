@@ -12,7 +12,7 @@ class block2x2;
 class block1x2;
 
 
-
+class Load;
 class Rectangle : public Element {
 public:
 	static void init();
@@ -44,6 +44,7 @@ public:
 	// вычисление локальной матрицы жесткости для элемента
 	void Calculate_LocalStiffnessMatrix(Element& element);
 	vector<int> fixed_nodes;
+	vector<int> loaded_nodes;
 	// сюда будем вносить блоки, так как матрица жесткости имеет блочную структуру
 	vector<vector<block2x2>> LocalStiffnessMatrix_block;
 	vector<vector<block2x2>> GlobalStiffnessMatrix_block;
@@ -54,7 +55,7 @@ public:
 	void Assemble_GlobalStiffnessMatrix(Mesh& mesh);
 	
 	// вычисление локального вектора нагрузок
-	void Calculate_LocalLoadVector(Element& element);
+	void Calculate_LocalLoadVector(Element& element, Load P);
 	vector<block1x2> LocalLoadVector_block;
 	vector<block1x2> GlobalLoadVector_block;
 
@@ -73,8 +74,9 @@ public:
 class Load {
 public:
 	Load();
+	void GetLineLength(Mesh mesh);
+	double LineLength;
 	double Px, Py;	// компоненты поверхностных сил
-
 };
 
 // этот блок будет элементом локальной матрицы жесткости

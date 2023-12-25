@@ -15,8 +15,17 @@ Material::Material() {
 }
 
 Load::Load() {
-	Px = -1000.0;
+	LineLength = 0.0;
+	Px = -1000;							// нагрузка, которую прикладываем к линии, [Н/мм]
 	Py = 0.0;
+}
+void Load::GetLineLength(Mesh mesh) {
+	double x1, x2, y1, y2;				// координаты точек, формирующих линию, длину которой нужно посчитать
+	x1 = mesh.subdomain.coords.begin()->x;
+	y1 = mesh.subdomain.coords.begin()->y;
+	x2 = (mesh.subdomain.coords.end() - 1)->x;
+	y2 = (mesh.subdomain.coords.end() - 1)->y;
+	LineLength = sqrt((x1 - x1) * (x1 - x1) + (y2 - y1) * (y2 - y1));		// длина линии чере координаты ее точек
 }
 
 block2x2::block2x2() {
@@ -151,7 +160,6 @@ double Rectangle::param_func_y(double t, Point& from, Point& to) {
 }
 
 
-// !!!!!!!!!!! 3 и 4 базисные функции неправильно выражены для данной нумерации узлов - исправить	!!!!!!!!!!!!!!!!!!!!
 
 double Rectangle::phi(size_t func_num, Point& from, Point& to, double x, double y) {
 
@@ -180,7 +188,6 @@ double Rectangle::parametric_phi(size_t func_num, double t) {
 	}
 }
 
-// !!!!!!! ИСПРАВИТЬ ПРОИЗВЕДЕНИЯ 3 И 4 БАЗИСНЫХ ФУНКЦИЙЙ !!!!!!!!!!!!
 
  // вызываем для коэффициента Kvar[num1][num2], где var - переменная, по которой дифференцируем функцию phi(x,y)
  // var = 0 - x, var = 1 - y, var = 2 - xy, var = 3 - yx;
@@ -344,19 +351,22 @@ double Rectangle::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, s
 
 double Rectangle::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
 	double res = 0.0;
-	//double ksi = 0;
-	Point t;
-	// double hx = to.x - from.x;	// если нагрузка будет прикладываться к кромке, параллельной оси x, интегрируем по x
+	//double hx = to.x - from.x;
 	double hy = to.y - from.y;
+	//double x_centre = (to.x+from.x) / 2;
+	double y_centre = (to.y+from.y) / 2.;
+	double ksi,eta;
 	for (int g = 0; g < 3; g++) {
-		// ksi = (from.x + to.x) / 2 + integrate_points[g].x * hx / 2;
-		t = (integrate_points[g] + 1.0) / 2;	// интегрируем от 0 до 1
-		// интегрируем по t
-		double param_x = param_func_x(t.x, from, to);
-		double param_y = param_func_y(t.y, from, to);	// чтобы точки Гаусса были одинаковы (костыль)
-		res += gauss_weights[g] * phi(num, from, to, param_x, param_y);
+		//ksi = x_centre + gauss_points_local[g] * hx/2;
+		eta = y_centre + gauss_points_local[g] * hy / 2.;
+		switch (num) {
+		case 0: res += hy / 2. * gauss_weights[g] * bfunc1D_1(from.y, to.y, eta); break;	// если нагрузка приложена к левой или правой кромке (параллельны у) то интеригруем одномерную б.ф. Y1
+		//case 1: res += hx/2. * gauss_weights[g] * bfunc1D_1(from.x, to.x, ksi); break;	/// если нагрузка приложена к верхней или нижней кромке (параллельны х), интегрируем одномерную б.ф. X1
+		//case 2: res += hx/2. * gauss_weights[g] * bfunc1D_2(from.x, to.x, ksi); break;	/// и X2
+		case 3: res += hy / 2. * gauss_weights[g] * bfunc1D_2(from.y, to.y, eta); break;	// Y2
+		}
 	}
-	return res / 2.0;
+	return res;
 }
 
 
@@ -369,7 +379,6 @@ void Rectangle::Calculate_LocalStiffnessMatrix(Element& element) {
 		Kxy,
 		Kyx;
 	for (size_t i = 0; i < 4; i++) {
-		int k = 0;
 		for (size_t j = 0; j < 4; j++) {
 			Kx = Element_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i, j, 0);
 			Ky = Element_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i, j, 1);
@@ -474,6 +483,12 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
 	}
 
+	// =========== Создание списка нагруженных узлов ==============
+
+	for (size_t i = 0; i < mesh.nodes.size(); i++) {
+		if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+			loaded_nodes.push_back(mesh.nodes[i].num);
+	}
 
 
 
@@ -523,18 +538,16 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	cout << "Assembling Global Stiffness Matrix complete\n";
 }
 
-void Rectangle::Calculate_LocalLoadVector(Element& element) {
+void Rectangle::Calculate_LocalLoadVector(Element& element, Load P) {
 	block1x2 block;
 
-	Load P;
 	for (int i = 0; i < 4; i++) {
-		block.val1 = mat.thickness * P.Px * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i);
-		block.val2 = mat.thickness * P.Py * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i);
+		block.val1 = P.Px * P.LineLength * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i)/(loaded_nodes.size()-1);
+		block.val2 = P.Py * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i)/(loaded_nodes.size()-1);
 
 		LocalLoadVector_block[i] = block;
 	}
-
-	// переформатирование локального вектора нагрузок в поэлементный формат
+		// переформатирование локального вектора нагрузок в поэлементный формат
 	for (int i = 0; i < LocalLoadVector.size(); i++) {
 		if ((i + 1) % 2 != 0)
 			LocalLoadVector[i] = LocalLoadVector_block[i / 2].val1;
@@ -547,31 +560,35 @@ void Rectangle::Calculate_LocalLoadVector(Element& element) {
 void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
 	cout << "\nAssembling Global Load Vector...\n";
 	int nodes_count = mesh.nodes.size();
+	Load P;
+	P.GetLineLength(mesh);
 	block1x2 block;
 	// размер вектора нагрузок - 1хN, где N = количество_степеней_свободы_узла(2) * количество_узлов
 	// в блочном формате - 1xK, где K = количество_узлов
 	GlobalLoadVector_block.resize(nodes_count);
-	
+
 	// собираем
+	// вектор нагрузки должен считаться только для тех элементов, ребра которых подвержены нагрузке
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
 		Element current_element = mesh.elements[i_elem];
-		Calculate_LocalLoadVector(current_element);
-		for (int i = 0; i < current_element.loc_nodes.size(); i++) {
-			GlobalLoadVector_block[current_element.loc_nodes[i].num - 1] += LocalLoadVector_block[i];
+		for (int i_node = 0; i_node < loaded_nodes.size(); i_node++) {
+			// если левое ребро элемента нагружено (т. е. его первый или четвертый узел лежат на нагруженной кромке), то он имеет вклад в вектор нагрузок и считаем для него локальный вектор
+			if (current_element.loc_nodes[0].num == loaded_nodes[i_node] || current_element.loc_nodes[3].num == loaded_nodes[i_node]) {
+				Calculate_LocalLoadVector(current_element, P);
+				if (current_element.loc_nodes[0].num == loaded_nodes[i_node])
+					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[0];
+				if (current_element.loc_nodes[3].num == loaded_nodes[i_node])
+					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[3];
+			}
 		}
 	}
 
 	GlobalLoadVector.resize(nodes_count * 2,0);
 
 	// сборка глобального вектора нагрузок в поэлементом формате
-	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-		Element current_element = mesh.elements[i_elem];
-		Calculate_LocalLoadVector(current_element);
-		for (int i = 0; i < current_element.loc_nodes.size(); i++) {
-			int i_1 = current_element.loc_nodes[i].num - 1;
-			GlobalLoadVector[2 * i_1] += LocalLoadVector_block[i].val1;
-			GlobalLoadVector[2 * i_1 + 1] += LocalLoadVector_block[i].val2;
-		}
+	for (int i = 0; i < GlobalLoadVector_block.size(); i++) {
+		GlobalLoadVector[2 * i] = GlobalLoadVector_block[i].val1;
+		GlobalLoadVector[2 * i + 1] = GlobalLoadVector_block[i].val2;
 	}
 
 
