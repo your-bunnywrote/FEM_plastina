@@ -22,6 +22,7 @@
 #include "fem.h"
 
 ofstream logfile;
+string output_folder = "output";
 
 int Read_Long_From_Txt_File(const char* fname, int* number)
 {
@@ -232,8 +233,7 @@ void solve_pardiso_symm(MKL_INT64 n, MKL_INT64* ia, MKL_INT64* ja, double* a, do
 		system("pause");
 		exit(3);
 	}
-
-	WriteResultTxt("test\\u.txt", x, n, 1);
+	WriteResultTxt("output\\u.txt", x, n, 1);
 
 	logfile.close();
 	logfile.clear();
@@ -242,8 +242,8 @@ void solve_pardiso_symm(MKL_INT64 n, MKL_INT64* ia, MKL_INT64* ja, double* a, do
 
 int main() {
 	Mesh mesh;
-	string	filename_nodes = "test\\nodes_test.txt",
-			filename_elements = "test\\elements_test.txt";
+	string	filename_nodes = output_folder + "\\nodes.txt",
+			filename_elements = output_folder + "\\elements.txt";
 	CreateMesh(mesh, filename_nodes, filename_elements);
 
 
@@ -256,7 +256,7 @@ int main() {
 	ofstream out;
 
 
-	out.open("test\\out_stiffness_matrix.txt");
+	out.open(output_folder + "\\out_stiffness_matrix.txt");
 	//cout << "Printing results...\n";
 
 	for (int i = 0; i < rect.GlobalStiffnessMatrix.size(); i++) {
@@ -268,7 +268,7 @@ int main() {
 
 
 	out.close();
-	out.open("test\\out_loads_vec.txt");
+	out.open(output_folder + "\\out_loads_vec.txt");
 
 	for (int i = 0; i < rect.GlobalLoadVector.size(); i++) {
 		out << rect.GlobalLoadVector[i] << "\n";

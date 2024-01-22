@@ -477,7 +477,7 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 
 	comp_domain domain = mesh.subdomain;
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+		if (mesh.nodes[i].x == mesh.subdomain.coords[2].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
 			fixed_nodes.push_back(mesh.nodes[i].num);					// coords[0].x - координата левой кромки пластины
 																		// coords[1].x - координата отверстия пластины
 																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
@@ -486,7 +486,7 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	// =========== Создание списка нагруженных узлов ==============
 
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+		if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
 			loaded_nodes.push_back(mesh.nodes[i].num);
 	}
 
@@ -542,8 +542,8 @@ void Rectangle::Calculate_LocalLoadVector(Element& element, Load P) {
 	block1x2 block;
 
 	for (int i = 0; i < 4; i++) {
-		block.val1 = P.Px * P.LineLength * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i)/(loaded_nodes.size()-1);
-		block.val2 = P.Py * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i)/(loaded_nodes.size()-1);
+		block.val1 = P.Px * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i);
+		block.val2 = P.Py * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i);
 
 		LocalLoadVector_block[i] = block;
 	}
@@ -641,20 +641,20 @@ void Rectangle::GeneratePortrait(Portrait& portrait,vector<vector<double>> GSM, 
 
 	ja_sz = portrait.ig[GSM.size()];
 
-	ofstream outfile;
-	outfile.open("test\\jg.txt");
-	for (int i = 0; i < ggl_size; i++) {
-		outfile << portrait.jg[i] << endl;
-	}
-	outfile.close();
+	//ofstream outfile;
+	//outfile.open("CSRmatrix\\jg.txt");
+	//for (int i = 0; i < ggl_size; i++) {
+	//	outfile << portrait.jg[i] << endl;
+	//}
+	//outfile.close();
 
-	outfile.open("test\\ig.txt");
-	for (int i = 0; i < GSM.size() + 1; i++)
-		outfile << portrait.ig[i] << endl;
-	outfile.close();
+	//outfile.open("CSRmatrix\\ig.txt");
+	//for (int i = 0; i < GSM.size() + 1; i++)
+	//	outfile << portrait.ig[i] << endl;
+	//outfile.close();
 
-	outfile.open("test\\ggl.txt");
-	for (int i = 0; i < ggl_size; i++)
-		outfile << portrait.ggl[i] << endl;
-	outfile.close();
+	//outfile.open("CSRmatrix\\ggl.txt");
+	//for (int i = 0; i < ggl_size; i++)
+	//	outfile << portrait.ggl[i] << endl;
+	//outfile.close();
 }
