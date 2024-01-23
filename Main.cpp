@@ -233,7 +233,7 @@ void solve_pardiso_symm(MKL_INT64 n, MKL_INT64* ia, MKL_INT64* ja, double* a, do
 		system("pause");
 		exit(3);
 	}
-	WriteResultTxt("output\\u.txt", x, n, 1);
+	WriteResultTxt((output_folder + "/u.txt").c_str(), x, n, 1);
 
 	logfile.close();
 	logfile.clear();
