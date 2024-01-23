@@ -14,7 +14,7 @@ vector<string> split(string& s, char delimeter) {
 }
 
 
-string input_folder = "input";
+string input_folder = "test";
 
 // =======================================================================
 
@@ -73,7 +73,7 @@ Element::Element() {
 
 void comp_domain::readfile_domains() {
 	ifstream W;
-	W.open( input_folder + "\\subdomains.txt");
+	W.open( input_folder + "/subdomains.txt");
 
 	W >> Nx;
 	double x;
@@ -124,7 +124,7 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	mesh.subdomain.readfile_domains();
 	ifstream Xmsh, Ymsh;
 	// x
-	Xmsh.open( input_folder + "\\partition_info_x.txt");
+	Xmsh.open( input_folder + "/partition_info_x.txt");
 	string line;
 	while (getline(Xmsh, line)) {
 		vector<string> tokens = split(line, '\t');
@@ -138,7 +138,7 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	Xmsh.close();
 	line.clear();
 	// y
-	Ymsh.open( input_folder + "\\partition_info_y.txt");
+	Ymsh.open( input_folder + "/partition_info_y.txt");
 	while (getline(Ymsh, line)) {
 		vector<string> tokens = split(line, '\t');
 		mesh.ny.push_back(stoi(tokens.at(0)));
