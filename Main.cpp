@@ -22,7 +22,7 @@
 #include "fem.h"
 
 ofstream logfile;
-string output_folder = "output";
+string output_folder = "test";
 
 int Read_Long_From_Txt_File(const char* fname, int* number)
 {
