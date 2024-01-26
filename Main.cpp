@@ -247,77 +247,77 @@ int main() {
 	CreateMesh(mesh, filename_nodes, filename_elements);
 
 
-	Rectangle rect;
-	Element element = mesh.elements[0];
+	//Rectangle rect;
+	//Element element = mesh.elements[0];
 
-	rect.Assemble_GlobalStiffnessMatrix(mesh);
-	rect.Assemble_GlobalLoadVector(mesh);
-	
-	ofstream out;
-
-
-	out.open(output_folder + "\\out_stiffness_matrix.txt");
-	//cout << "Printing results...\n";
-
-	for (int i = 0; i < rect.GlobalStiffnessMatrix.size(); i++) {
-		for (int j = 0; j < rect.GlobalStiffnessMatrix.size(); j++) {
-			out << rect.GlobalStiffnessMatrix[i][j] << "\t";
-		}
-		out << "\n";
-	}
+	//rect.Assemble_GlobalStiffnessMatrix(mesh);
+	//rect.Assemble_GlobalLoadVector(mesh);
+	//
+	//ofstream out;
 
 
-	out.close();
-	out.open(output_folder + "\\out_loads_vec.txt");
+	//out.open(output_folder + "\\out_stiffness_matrix.txt");
+	////cout << "Printing results...\n";
 
-	for (int i = 0; i < rect.GlobalLoadVector.size(); i++) {
-		out << rect.GlobalLoadVector[i] << "\n";
-	}
-	out.close();
-
-
-	int n = rect.GlobalStiffnessMatrix.size();
-	Portrait portrait(n);
-	int ig_n_1 = 0;
-	rect.GeneratePortrait(portrait, rect.GlobalStiffnessMatrix, ig_n_1);
-
-	double* b = new double[n];
-	for (int i = 0; i < n; i++) {
-		b[i] = rect.GlobalLoadVector[i];
-	}
-
-	int sz_ia = 0;
-	int sz_ja = 0;
+	//for (int i = 0; i < rect.GlobalStiffnessMatrix.size(); i++) {
+	//	for (int j = 0; j < rect.GlobalStiffnessMatrix.size(); j++) {
+	//		out << rect.GlobalStiffnessMatrix[i][j] << "\t";
+	//	}
+	//	out << "\n";
+	//}
 
 
-	double* x = new double[n];		// вектор неизвестных
+	//out.close();
+	//out.open(output_folder + "\\out_loads_vec.txt");
 
-	FromRSFToCSR_Real_1_Sym(n, portrait.ig, &sz_ia, &sz_ja);
-	MKL_INT64* ia = new MKL_INT64[sz_ia];	// массив адресов начала ненулевых строк
-	MKL_INT64* ja = new MKL_INT64[sz_ja];	// массив адресов столбцов ненулевых элементов
-	double* ggl = new double[ig_n_1];
-	double* a = new double[sz_ja];
-
-
-	FromRSFToCSR_Real_2_Sym(n, portrait.ig, portrait.jg, portrait.di, portrait.ggl, ia, ja, a);
-	for (int i = 0; i < sz_ia; i++) {
-		ia[i]++;
-	}
-	for (int i = 0; i < sz_ja; i++) {
-		ja[i]++;
-	}
+	//for (int i = 0; i < rect.GlobalLoadVector.size(); i++) {
+	//	out << rect.GlobalLoadVector[i] << "\n";
+	//}
+	//out.close();
 
 
+	//int n = rect.GlobalStiffnessMatrix.size();
+	//Portrait portrait(n);
+	//int ig_n_1 = 0;
+	//rect.GeneratePortrait(portrait, rect.GlobalStiffnessMatrix, ig_n_1);
 
-	solve_pardiso_symm(n, ia, ja, a, b, x);
+	//double* b = new double[n];
+	//for (int i = 0; i < n; i++) {
+	//	b[i] = rect.GlobalLoadVector[i];
+	//}
+
+	//int sz_ia = 0;
+	//int sz_ja = 0;
 
 
-	cout << "\n Solution is done!\n";
+	//double* x = new double[n];		// вектор неизвестных
 
-	delete[] b;
-	delete[] x;
-	delete[] ia;
-	delete[] ja;
+	//FromRSFToCSR_Real_1_Sym(n, portrait.ig, &sz_ia, &sz_ja);
+	//MKL_INT64* ia = new MKL_INT64[sz_ia];	// массив адресов начала ненулевых строк
+	//MKL_INT64* ja = new MKL_INT64[sz_ja];	// массив адресов столбцов ненулевых элементов
+	//double* ggl = new double[ig_n_1];
+	//double* a = new double[sz_ja];
+
+
+	//FromRSFToCSR_Real_2_Sym(n, portrait.ig, portrait.jg, portrait.di, portrait.ggl, ia, ja, a);
+	//for (int i = 0; i < sz_ia; i++) {
+	//	ia[i]++;
+	//}
+	//for (int i = 0; i < sz_ja; i++) {
+	//	ja[i]++;
+	//}
+
+
+
+	//solve_pardiso_symm(n, ia, ja, a, b, x);
+
+
+	//cout << "\n Solution is done!\n";
+
+	//delete[] b;
+	//delete[] x;
+	//delete[] ia;
+	//delete[] ja;
 
 
 	return 0;

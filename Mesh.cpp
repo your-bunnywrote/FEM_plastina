@@ -301,6 +301,8 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	}
 	out.close();
 	out.clear();
+
+	cout << "Meshing complete!" << endl;
 }
 
 
