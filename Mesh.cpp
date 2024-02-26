@@ -66,13 +66,25 @@ Point Point::operator/(double val) {
 }
 
 Element::Element() {
-	loc_nodes.resize(4);
+	loc_nodes = new Point[4];
 }
 
 //========================================================================
 
-void comp_domain::readfile_domains() {
+comp_domain::comp_domain() {
 	ifstream W;
+
+	// так как процесс обработки геометрии нелинейный и сильно зависит от отверстия, будем запрашивать наличие отверстия через консоль
+	// если отверстия нет, то структура входных данных будет стандартная, заранее определенная в файле "no_hole_geom.txt" ("subdomains.txt")
+	// если отверстие есть, то структура входных данных будет иметь другой вид и формироваться будет программой
+	
+	// структура данных для геометрии с отверстием будет примерно такая:
+	// четыре ключевые точки - углы прямоугольника, определяющие его длину и ширину
+	// радиус окружности
+	// (не входит в структуру) центр окружности - вычисляется через размеры прямоугольника
+	// через имеющиеся параметры вычисляются координаты остальных ключевых точек (середины дуг, их проекции на горизонтальные и вертикальные линии) и вносятся в структуру
+	// 
+
 	W.open( input_folder + "/subdomains.txt");
 
 	W >> Nx;
@@ -81,6 +93,9 @@ void comp_domain::readfile_domains() {
 		W >> x;
 		coords.push_back(Point(x, -1., 0));
 	}
+
+	length = (coords[Nx - 1].x - coords[0].x);
+
 	W >> Ny;
 	for (size_t i = 0; i < Ny; i++) {
 		double y;
@@ -92,24 +107,27 @@ void comp_domain::readfile_domains() {
 			coords.push_back(Point(-1., y, 0));
 		}
 	}
+	
+	width = (coords[Ny - 1].y - coords[0].y);
+
 	int W_count;
 	W >> W_count;
-	domains.resize(W_count);
+	rect_domains.resize(W_count);
 	double x1, x2, y1, y2;
 	int mat;
 	for (size_t i = 0; i < W_count; i++) {
 		W >> mat >> x1 >> x2 >> y1 >> y2;
-		domains[i].first.x = coords[x1].x;
-		domains[i].first.y = coords[y1].y;
-		domains[i].second.x = coords[x2].x;
-		domains[i].second.y = coords[y2].y;
+		rect_domains[i].first.x = coords[x1].x;
+		rect_domains[i].first.y = coords[y1].y;
+		rect_domains[i].second.x = coords[x2].x;
+		rect_domains[i].second.y = coords[y2].y;
 	}
 	W.close();
 }
 
 bool comp_domain::is_contain(const Point& node) {
-	for (size_t i = 0; i < domains.size(); i++) {
-		if ((node.x >= domains[i].first.x) && (node.x <= domains[i].second.x + 1) && (node.y >= domains[i].first.y) && (node.y <= domains[i].second.y)) 
+	for (size_t i = 0; i < rect_domains.size(); i++) {
+		if ((node.x >= rect_domains[i].first.x) && (node.x <= rect_domains[i].second.x + 1) && (node.y >= rect_domains[i].first.y) && (node.y <= rect_domains[i].second.y)) 
 			return true;
 	}
 	return false;
@@ -121,7 +139,7 @@ bool comp_domain::is_contain(const Point& node) {
 
 void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	// информация о разбиении областей
-	mesh.subdomain.readfile_domains();
+	//mesh.subdomain.comp_domain();
 	ifstream Xmsh, Ymsh;
 	// x
 	Xmsh.open( input_folder + "/partition_info_x.txt");

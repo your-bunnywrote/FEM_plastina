@@ -436,8 +436,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
 		Element current_element = mesh.elements[i_elem];
 		Calculate_LocalStiffnessMatrix(current_element);
-		for (int i = 0; i < current_element.loc_nodes.size(); i++) {
-			for (int j = 0; j < current_element.loc_nodes.size(); j++) {
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
 				GlobalStiffnessMatrix_block[current_element.loc_nodes[i].num - 1][current_element.loc_nodes[j].num - 1] += LocalStiffnessMatrix_block[i][j];
 			}
 		}
@@ -455,8 +455,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
 		Element current_element = mesh.elements[i_elem];
 		Calculate_LocalStiffnessMatrix(current_element);
-		for (int i = 0; i < current_element.loc_nodes.size(); i++) {
-			for (int j = 0; j < current_element.loc_nodes.size(); j++) {
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
 				int i_1 = current_element.loc_nodes[i].num - 1,
 					j_1 = current_element.loc_nodes[j].num - 1;
 				GlobalStiffnessMatrix[2 * i_1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val11;
@@ -505,7 +505,7 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 		}
 	}
 
-	// применение условий закрепления к поэлементно собранной матрицу
+	// применение условий закрепления к поэлементно собранной матрице
 	for (int k = 0; k < fixed_nodes.size(); k++) {
 		for (int i = 0; i < GlobalStiffnessMatrix.size()/2; i++) {
 			if (i == (fixed_nodes[k] - 1)) {	// если номер строки совпадает с номером закрепленного узла

@@ -13,7 +13,7 @@
 
 using namespace std;
 
-//  ласс узла
+//  ласс точки/узла
 class Point {
 public:
 	double x, y;
@@ -37,8 +37,11 @@ class comp_domain {
 public:
 	int Nx, Ny;			// количество линий, ограничивающих подобласти
 	vector<Point> coords;	// вектор координат линий, ограничивающих подобласти
-	vector<pair<Point, Point >> domains;	// содержит пару поинтов - противоположные углы пр€моугольника (x1,y1) и (x2,y2)
-	void readfile_domains();
+	double length;
+	double width;
+	double hole_radius;
+	vector<pair<Point, Point >> rect_domains;	// содержит пару поинтов - противоположные углы пр€моугольника (x1,y1) и (x2,y2), фактически описывающие пр€моугольник
+	comp_domain();
 	bool is_contain(const Point& node);	// провер€ет, попадает ли узел в истинную подобласть
 };
 
@@ -53,14 +56,17 @@ public:
 
 };
 
+
 class Element {
 public:
-	vector<Point> loc_nodes;
+	enum etype { RECTANGLE, QUADRILATERAL };
+	Point* loc_nodes;
 	size_t num;
 	Material mat;
-	vector<vector<double>> D{ {mat.c, mat.c * mat.mu, 0},
-							  {mat.c * mat.mu, mat.c * 1, 0},
-							  {0, 0, mat.c * (1 - mat.mu)/2}};	// матрица упругости, дл€ изотропного материала имеюща€ вид
+	// –≈ƒј “»–ќ¬ј“№: можно заменить на обычный двумерный массив
+	vector<vector<double>> D = {{mat.c, mat.c * mat.mu, 0},
+							   {mat.c * mat.mu, mat.c * 1, 0},
+							   {0, 0, mat.c * (1 - mat.mu)/2}};	// матрица упругости, дл€ изотропного материала имеюща€ вид		
 	//												    E   |1 mu	 0	  |
 	//											D  = ------	|mu 1	 0	  |
 	//												 1-mu^2 |0  0 (1-mu)/2|
