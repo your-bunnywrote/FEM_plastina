@@ -41,8 +41,10 @@ public:
 	double width;
 	double hole_radius;
 	vector<pair<Point, Point >> rect_domains;	// содержит пару поинтов - противоположные углы прямоугольника (x1,y1) и (x2,y2), фактически описывающие прямоугольник
-	comp_domain();
+	void read_noholegeom_info();
+	void create_holegeom_info();
 	bool is_contain(const Point& node);	// проверяет, попадает ли узел в истинную подобласть
+	comp_domain();
 };
 
 struct Material {
@@ -71,6 +73,7 @@ public:
 	//											D  = ------	|mu 1	 0	  |
 	//												 1-mu^2 |0  0 (1-mu)/2|
 	Element();
+	~Element();
 };
 
 

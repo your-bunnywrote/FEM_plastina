@@ -68,24 +68,40 @@ Point Point::operator/(double val) {
 Element::Element() {
 	loc_nodes = new Point[4];
 }
+Element::~Element() {
+	delete[] loc_nodes;
+}
 
 //========================================================================
 
 comp_domain::comp_domain() {
-	ifstream W;
 
 	// так как процесс обработки геометрии нелинейный и сильно зависит от отверстия, будем запрашивать наличие отверстия через консоль
 	// если отверстия нет, то структура входных данных будет стандартная, заранее определенная в файле "no_hole_geom.txt" ("subdomains.txt")
 	// если отверстие есть, то структура входных данных будет иметь другой вид и формироваться будет программой
-	
+
 	// структура данных для геометрии с отверстием будет примерно такая:
-	// четыре ключевые точки - углы прямоугольника, определяющие его длину и ширину
-	// радиус окружности
+	// четыре ключевые точки - углы прямоугольника, определяющие его длину и ширину - задаются в файле
+	// радиус окружности - задается в файле
 	// (не входит в структуру) центр окружности - вычисляется через размеры прямоугольника
 	// через имеющиеся параметры вычисляются координаты остальных ключевых точек (середины дуг, их проекции на горизонтальные и вертикальные линии) и вносятся в структуру
 	// 
 
-	W.open( input_folder + "/subdomains.txt");
+	bool is_hole = false;
+	cout << "Define the presence of hole (0/1):" << endl;
+	cin >> is_hole;
+	if (is_hole)
+		create_holegeom_info();
+	else
+		read_noholegeom_info();
+
+
+}
+
+// чтение файла, описывающего прямоугольную геометрию
+void comp_domain::read_noholegeom_info() {
+	ifstream W;
+	W.open(input_folder + "/subdomains.txt");
 
 	W >> Nx;
 	double x;
@@ -107,7 +123,7 @@ comp_domain::comp_domain() {
 			coords.push_back(Point(-1., y, 0));
 		}
 	}
-	
+
 	width = (coords[Ny - 1].y - coords[0].y);
 
 	int W_count;
@@ -123,6 +139,23 @@ comp_domain::comp_domain() {
 		rect_domains[i].second.y = coords[y2].y;
 	}
 	W.close();
+}
+
+
+// создание информации о геометрии пластины с отверстием
+void comp_domain::create_holegeom_info() {
+	vector<Point> keypoints;
+	ifstream plategeomfile;
+	plategeomfile.open(input_folder + "plate_geom.txt");
+	rect_domains.resize(1);		// так как изначально у нас одна прямоугольная область
+	double x1, y1, x2, y2;		// координаты левого нижнего и правого верхнего углов прямоугольника
+	plategeomfile >> x1 >> y1 >> x2 >> y2;
+	plategeomfile >> hole_radius;
+
+
+
+
+
 }
 
 bool comp_domain::is_contain(const Point& node) {
