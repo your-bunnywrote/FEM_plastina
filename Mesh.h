@@ -3,6 +3,8 @@
 #ifndef MESH_H
 #define MESH_H
 
+#define _USE_MATH_DEFINES
+
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -10,6 +12,7 @@
 #include <sstream>
 #include <numeric>
 #include <cmath>
+#include <cstdio>
 
 using namespace std;
 
@@ -43,6 +46,7 @@ public:
 	vector<pair<Point, Point >> rect_domains;	// содержит пару поинтов - противоположные углы прямоугольника (x1,y1) и (x2,y2), фактически описывающие прямоугольник
 	void read_noholegeom_info();
 	void create_holegeom_info();
+	void nonsymmetric_hole_geom();
 	bool is_contain(const Point& node);	// проверяет, попадает ли узел в истинную подобласть
 	comp_domain();
 };

@@ -145,18 +145,63 @@ void comp_domain::read_noholegeom_info() {
 // создание информации о геометрии пластины с отверстием
 void comp_domain::create_holegeom_info() {
 	vector<Point> keypoints;
-	ifstream plategeomfile;
-	plategeomfile.open(input_folder + "plate_geom.txt");
+	fstream plategeomfile;
+	plategeomfile.open(input_folder + "/plate_geom.txt");
 	rect_domains.resize(1);		// так как изначально у нас одна прямоугольная область
 	double x1, y1, x2, y2;		// координаты левого нижнего и правого верхнего углов прямоугольника
 	plategeomfile >> x1 >> y1 >> x2 >> y2;
 	plategeomfile >> hole_radius;
+	plategeomfile.close();
+
+	// включить обработку симметрии задачи, чтобы считать все необходимые координаты непосредственно в программе и не лезть в файлы
+	bool is_symmetric = false;
+	cout << "Define task symmetry (0/1):" << endl;
+	cin >> is_symmetric;
+
+	if (is_symmetric) {
+		Point hole_center(x2, (y2 - y1) / 2, 0);
+		//plategeomfile.open(input_folder + "/curves_and_domains.txt");
+		// величины постоянные, так как для такой геометрии существует только один вариант обработки используемым методом
+		int horizontal_keypoints_count = 3,		// количество точек вдоль оси x (задают верт. линии)
+			vertical_keypoints_count = 4;		// количество точек вдоль оси y (задают гор. линии)
+
+		vector<double> kp_x(horizontal_keypoints_count * vertical_keypoints_count,0.);
+		vector<double> kp_y(horizontal_keypoints_count * vertical_keypoints_count,0.);
+		
+		for (int i = 0; i < vertical_keypoints_count*horizontal_keypoints_count; i++) {
+
+			int k = i / horizontal_keypoints_count;
+			kp_x[0 + k] = 0.0;
+			kp_x[1 + k] = hole_center.x - hole_radius * cos(M_PI_4);
+			kp_x[2 + k] = x2;
+			
+			int l = i / vertical_keypoints_count;
+
+			kp_y[0 + l] = 0.0;
+			kp_y[1 + l] = hole_center.y - hole_radius * sin(M_PI_4);	// придумать зависимость угла от l такую, чтобы в подсчете последней четверки чисел угол был pi/2
+			kp_y[2 + l] = hole_center.y + hole_radius * sin(M_PI_4);
+			kp_y[3 + l] = y2;
+		}
+
+		vector<Point> keypoints;
+		keypoints.resize(horizontal_keypoints_count * vertical_keypoints_count);
 
 
 
+	}
+	else {
+
+		nonsymmetric_hole_geom();
+	}
 
 
 }
+
+void comp_domain::nonsymmetric_hole_geom() {
+
+
+}
+
 
 bool comp_domain::is_contain(const Point& node) {
 	for (size_t i = 0; i < rect_domains.size(); i++) {
