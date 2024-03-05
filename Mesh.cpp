@@ -176,10 +176,10 @@ void comp_domain::create_holegeom_info() {
 			kp_x[2 + k] = x2;
 			
 			int l = i / vertical_keypoints_count;
-			int a = 2. / 3. * l;
+			int a = 1 + l / 3;
 			kp_y[0 + l] = 0.0;
-			kp_y[1 + l] = hole_center.y - hole_radius * sin(M_PI_4 + a * M_PI_4);	// придумать зависимость угла от l такую, чтобы в подсчете последней четверки чисел угол был pi/2
-			kp_y[2 + l] = hole_center.y + hole_radius * sin(M_PI_4 + a * M_PI_4);
+			kp_y[1 + l] = hole_center.y - hole_radius * sin(a * M_PI_4);	// придумать зависимость угла от l такую, чтобы в подсчете последней четверки чисел угол был pi/2
+			kp_y[2 + l] = hole_center.y + hole_radius * sin(a * M_PI_4);
 			kp_y[3 + l] = y2;
 		}
 
