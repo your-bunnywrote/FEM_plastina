@@ -144,7 +144,7 @@ void comp_domain::read_noholegeom_info() {
 
 // создание информации о геометрии пластины с отверстием
 void comp_domain::create_holegeom_info() {
-	vector<Point> keypoints;
+
 	fstream plategeomfile;
 	plategeomfile.open(input_folder + "/plate_geom.txt");
 	rect_domains.resize(1);		// так как изначально у нас одна прямоугольная область
@@ -167,24 +167,33 @@ void comp_domain::create_holegeom_info() {
 
 		vector<double> kp_x(horizontal_keypoints_count * vertical_keypoints_count,0.);
 		vector<double> kp_y(horizontal_keypoints_count * vertical_keypoints_count,0.);
+
 		
 		for (int i = 0; i < vertical_keypoints_count*horizontal_keypoints_count; i++) {
 
 			int k = i / horizontal_keypoints_count;
-			kp_x[0 + k] = 0.0;
-			kp_x[1 + k] = hole_center.x - hole_radius * cos(M_PI_4);
-			kp_x[2 + k] = x2;
+
+			kp_x[3 * k + 0] = 0.0;
+			kp_x[3 * k + 1] = hole_center.x - hole_radius * cos(M_PI_4);
+			kp_x[3 * k + 2] = x2;
 			
+
 			int l = i / vertical_keypoints_count;
-			int a = 1 + l / 3;
-			kp_y[0 + l] = 0.0;
-			kp_y[1 + l] = hole_center.y - hole_radius * sin(a * M_PI_4);	// придумать зависимость угла от l такую, чтобы в подсчете последней четверки чисел угол был pi/2
-			kp_y[2 + l] = hole_center.y + hole_radius * sin(a * M_PI_4);
-			kp_y[3 + l] = y2;
+			double phi = (1 + (l + 1) / 3) * M_PI_4;	// pi/4 для точек первых двух "вертикальных линий", когда точка находится на середине четверти дуги окружности. pi/2 для последней линии, когда точка лежит на оси симметрии
+			kp_y[4 * l + 0] = 0.0;
+			kp_y[4 * l + 1] = hole_center.y - hole_radius * sin(phi);	// придумать зависимость угла от l такую, чтобы в подсчете последней четверки чисел угол был pi/2
+			kp_y[4 * l + 2] = hole_center.y + hole_radius * sin(phi);
+			kp_y[4 * l + 3] = y2;
 		}
 
-		vector<Point> keypoints;
-		keypoints.resize(horizontal_keypoints_count * vertical_keypoints_count);
+		vector<Point> keypoints(horizontal_keypoints_count * vertical_keypoints_count);
+
+		for (int j = 0; j < vertical_keypoints_count; j++) {
+			for (int i = 0; i < horizontal_keypoints_count; i++) {
+				keypoints[i + j * horizontal_keypoints_count].x = kp_x[i];
+				keypoints[i + j * horizontal_keypoints_count].y = kp_y[4 * i + j];
+			}
+		}
 
 
 
