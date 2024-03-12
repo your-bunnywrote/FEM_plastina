@@ -1,4 +1,5 @@
 // Mesh.cpp - определение всех функций и операторов, модуль для построения сетки
+// Основная литература - "Метод конечных элементов для решения скалярных и векторных задач" [1]
 
 #include "Mesh.h"
 
@@ -181,7 +182,11 @@ void comp_domain::create_holegeom_info() {
 			int l = i / vertical_keypoints_count;
 			double phi = (1 + (l + 1) / 3) * M_PI_4;	// pi/4 для точек первых двух "вертикальных линий", когда точка находится на середине четверти дуги окружности. pi/2 для последней линии, когда точка лежит на оси симметрии
 			kp_y[4 * l + 0] = 0.0;
+<<<<<<< HEAD
 			kp_y[4 * l + 1] = hole_center.y - hole_radius * sin(phi);	// придумать зависимость угла от l такую, чтобы в подсчете последней четверки чисел угол был pi/2
+=======
+			kp_y[4 * l + 1] = hole_center.y - hole_radius * sin(phi);
+>>>>>>> 9ebc995 (РЎРѕСЃС‚Р°РІР»РµРЅ С„Р°Р№Р» РґР»СЏ РѕРїРёСЃР°РЅРёСЏ СЌР»РµРјРµРЅС‚Р°СЂРЅС‹С… РїРѕРґРѕР±Р»Р°СЃС‚РµР№)
 			kp_y[4 * l + 2] = hole_center.y + hole_radius * sin(phi);
 			kp_y[4 * l + 3] = y2;
 		}
@@ -194,8 +199,37 @@ void comp_domain::create_holegeom_info() {
 				keypoints[i + j * horizontal_keypoints_count].y = kp_y[4 * i + j];
 			}
 		}
+<<<<<<< HEAD
+=======
+
+		// Описание элементарных подобластей. Для рассматриваемой геометрии данные постоянны:
+		// [1,стр. 461]
+		// количество подобластей
+		// первое число - номер материала, второе число - номер вертикальной кривой, ограничивающей подобласть слева, третье - номер вертикальной кривой, ограничивающей подобласть справа
+		// четвертое - номер горизонтальной кривой, ограничивающей подобласть снизу, пятое - номер горизонтальной кривой, ограничивающей подобласть сверху 
+		int W_count = 3;
+		int mat = 1;
+		vector<pair<int, int>> vertical_lines_indeces{ {0,1},{1,2},{1,2} };
+		vector<pair<int, int>> horizontal_lines_indeces{ {0,3},{0,1},{2,3} };
+		
+		ofstream ofile(input_folder + "/curves_and_domains.txt");
+		ofile << horizontal_keypoints_count << " " << vertical_keypoints_count << endl;
+		for (int j = 0; j < vertical_keypoints_count; j++) {
+			for (int i = 0; i < horizontal_keypoints_count; i++) {
+				ofile << keypoints[i + horizontal_keypoints_count * j].x << " " << keypoints[i + horizontal_keypoints_count * j].y << ((i == horizontal_keypoints_count - 1) ? ("\n") : (" "));
+			}
+		}
+		ofile << W_count << endl;
+		int k = 0;
+		for (int i = 0; i < W_count; i++) {
+			ofile << mat << " " << vertical_lines_indeces[k].first << " " << vertical_lines_indeces[k].second << " " << horizontal_lines_indeces[k].first << " " << horizontal_lines_indeces[k].second << endl;
+			k++;
+		}
+		
+>>>>>>> 9ebc995 (РЎРѕСЃС‚Р°РІР»РµРЅ С„Р°Р№Р» РґР»СЏ РѕРїРёСЃР°РЅРёСЏ СЌР»РµРјРµРЅС‚Р°СЂРЅС‹С… РїРѕРґРѕР±Р»Р°СЃС‚РµР№)
 
 
+		ofile.close();
 
 	}
 	else {
