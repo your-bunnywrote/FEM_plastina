@@ -3,53 +3,9 @@
 #ifndef MESH_H
 #define MESH_H
 
-#define _USE_MATH_DEFINES
-
-#include <iostream>
-#include <vector>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <numeric>
-#include <cmath>
-#include <cstdio>
+#include "geometry.h"
 
 using namespace std;
-
-// Класс точки/узла
-class Point {
-public:
-	double x, y;
-	size_t num;
-	Point();
-	Point(const double x, const double y, const int num);
-	Point(const double x, const double y) :
-		x(x),
-	    y(y),
-		num()
-	{}
-	Point operator + (Point p);
-	Point operator + (double val);
-	Point operator / (double val);
-	Point operator - (Point p);
-	Point operator * (double t);
-};
-
-// Класс "Расчетная область"
-class comp_domain {
-public:
-	int Nx, Ny;			// количество линий, ограничивающих подобласти
-	vector<Point> coords;	// вектор координат линий, ограничивающих подобласти
-	double length;
-	double width;
-	double hole_radius;
-	vector<pair<Point, Point >> rect_domains;	// содержит пару поинтов - противоположные углы прямоугольника (x1,y1) и (x2,y2), фактически описывающие прямоугольник
-	void read_noholegeom_info();
-	void create_holegeom_info();
-	void nonsymmetric_hole_geom();
-	bool is_contain(const Point& node);	// проверяет, попадает ли узел в истинную подобласть
-	comp_domain();
-};
 
 struct Material {
 public:

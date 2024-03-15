@@ -133,12 +133,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="fem.cpp" />
+    <ClCompile Include="geometry.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MyMatrix.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fem.h" />
+    <ClInclude Include="geometry.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MyMatrix.h" />
   </ItemGroup>

@@ -20,6 +20,7 @@
 // פאיכû ÊÝּ
 #include "Mesh.h"
 #include "fem.h"
+#include "geometry.h"
 
 ofstream logfile;
 string output_folder = "test";
