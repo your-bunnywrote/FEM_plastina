@@ -176,42 +176,26 @@ void comp_domain::create_holegeom_info() {
 		// test
 		curve_type type = arc;
 
-		// забабахать цикл
-		vector<Curve> hor_intervals(vertical_keypoints_count * (horizontal_keypoints_count - 1));
-		hor_intervals[0] = Curve(keypoints[0], keypoints[1], 0);
-		hor_intervals[1] = Curve(keypoints[1], keypoints[2], 1);
-		hor_intervals[2] = Curve(keypoints[3], keypoints[4], 2);
-		hor_intervals[3] = Curve(arc, hole_center, hole_radius, keypoints[4], keypoints[5], 3);
-		hor_intervals[4] = Curve(keypoints[6], keypoints[7], 4);
-		hor_intervals[5] = Curve(arc, hole_center, hole_radius, keypoints[7], keypoints[8], 5);
-		hor_intervals[6] = Curve(keypoints[9], keypoints[10], 6);
-		hor_intervals[7] = Curve(keypoints[10], keypoints[11], 7);
-
-		//забабахать цикл
 		vector<vector<Curve>> horizontal_lines(vertical_keypoints_count);
-		for (int i = 0; i < horizontal_curves.size(); i++) {
-			horizontal_curves[i].resize(horizontal_keypoints_count - 1);
+		for (int i = 0; i < horizontal_lines.size(); i++) {
+			horizontal_lines[i].resize(horizontal_keypoints_count - 1);
 		}
 
-		int num = 0;
+		int hor_interval_num = 0;
 		for (int i = 0; i < horizontal_lines.size(); i++) {
 			int j = 0;
-			horizontal_lines[i][j] = Curve(keypoints[i * horizontal_keypoints_count], keypoints[i * horizontal_keypoints_count + 1], num);
-			for (j = 1; j < horizontal_curves[i].size(); j++) {
+			int kp_index = i * horizontal_keypoints_count;
+			horizontal_lines[i][j] = Curve(keypoints[kp_index], keypoints[kp_index + 1], hor_interval_num++);
+			for (j = 1; j < horizontal_lines[i].size(); j++) {
 				if ((i == 1 || i == 2) && j == 1)
-					horizontal_lines[i][j] = Curve(arc, hole_center, hole_radius, horizontal_lines[i][j - 1].end, keypoints[j + 1], num++);
+					horizontal_lines[i][j] = Curve(arc, hole_center, hole_radius, horizontal_lines[i][j - 1].end, keypoints[kp_index + 1 + j], hor_interval_num++);
 				else
-					horizontal_lines[i][j] = Curve(horizontal_lines[i][j - 1].end, keypoints[j + 1], num++);	// изменить формулу индексирования конечной точки
+					horizontal_lines[i][j] = Curve(horizontal_lines[i][j - 1].end, keypoints[kp_index + 1 + j], hor_interval_num++);	// изменить формулу индексирования конечной точки
+
+
 			}
 		}
-		horizontal_lines[0][0] = Curve(keypoints[0], keypoints[1], 0);					// номер интервала - сумма индексов
-		horizontal_lines[0][1] = Curve(keypoints[1], keypoints[2], 1);
-		horizontal_lines[1][0] = Curve(keypoints[3], keypoints[4], 2);
-		horizontal_lines[1][1] = Curve(arc, hole_center, hole_radius, keypoints[4], keypoints[5], 3);
-		horizontal_lines[2][0] = Curve(keypoints[6], keypoints[7], 4);
-		horizontal_lines[2][1] = Curve(arc, hole_center, hole_radius, keypoints[7], keypoints[8], 5);
-		horizontal_lines[3][0] = Curve(keypoints[9], keypoints[10], 6);
-		horizontal_lines[3][1] = Curve(keypoints[10], keypoints[11], 7);
+
 
 
 
