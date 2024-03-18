@@ -196,25 +196,9 @@ void comp_domain::create_holegeom_info() {
 			}
 		}
 
-		//руками создать массив вертикальных интервалов
 		vector<vector<Curve>> vertical_lines(horizontal_keypoints_count);
 		for (int i = 0; i < vertical_lines.size(); i++)
 			vertical_lines[i].resize(vertical_keypoints_count - 1);
-
-		vertical_lines[0][0] = Curve(keypoints[0], keypoints[0 + horizontal_keypoints_count], 0);
-		vertical_lines[0][1] = Curve(keypoints[0 + horizontal_keypoints_count], keypoints[0 + 2 * horizontal_keypoints_count], 1);
-		vertical_lines[0][2] = Curve(keypoints[0 + 2 * horizontal_keypoints_count], keypoints[0 + 3 * horizontal_keypoints_count], 2);
-		vertical_lines[1][0] = Curve(keypoints[1], keypoints[1 + horizontal_keypoints_count], 3);
-		vertical_lines[1][1] = Curve(arc, hole_center, hole_radius, keypoints[1 + horizontal_keypoints_count], keypoints[1 + 2 * horizontal_keypoints_count], 4);
-		vertical_lines[1][2] = Curve(keypoints[1 + 2 * horizontal_keypoints_count], keypoints[1 + 3 * horizontal_keypoints_count], 5);
-		vertical_lines[2][0] = Curve(keypoints[2], keypoints[2 + horizontal_keypoints_count], 6);
-		vertical_lines[2][1] = Curve(keypoints[2 + horizontal_keypoints_count], keypoints[2 + 2 * horizontal_keypoints_count], 7);
-		vertical_lines[2][2] = Curve(keypoints[2 + 2 * horizontal_keypoints_count], keypoints[2 + 3 * horizontal_keypoints_count], 8);
-
-
-		//vector<vector<Curve>> vertical_lines(horizontal_keypoints_count);
-		//for (int i = 0; i < vertical_lines.size(); i++)
-		//	vertical_lines[i].resize(vertical_keypoints_count - 1);
 
 		int ver_interval_num = 0;
 		for (int i = 0; i < vertical_lines.size(); i++) {
@@ -229,17 +213,6 @@ void comp_domain::create_holegeom_info() {
 
 		}
 
-
-		vector<Curve> vert_intervals(horizontal_keypoints_count*(vertical_keypoints_count - 1));
-		vert_intervals[0] = Curve(keypoints[0], keypoints[0 + horizontal_keypoints_count], 0);
-		vert_intervals[1] = Curve(vert_intervals[0].end, keypoints[2 * horizontal_keypoints_count], 1);
-		vert_intervals[2] = Curve(vert_intervals[1].end, keypoints[3 * horizontal_keypoints_count], 2);
-		vert_intervals[3] = Curve(keypoints[1], keypoints[1 + horizontal_keypoints_count], 3);
-		vert_intervals[4] = Curve(arc, hole_center, hole_radius, keypoints[1 + horizontal_keypoints_count], keypoints[1 + 2 * horizontal_keypoints_count], 4);
-		vert_intervals[5] = Curve(vert_intervals[4].end, keypoints[1 + 3 * horizontal_keypoints_count], 5);
-		vert_intervals[6] = Curve(vert_intervals[5].end, keypoints[2 + horizontal_keypoints_count], 6);
-		vert_intervals[7] = Curve(vert_intervals[6].end, keypoints[2 + 2 * horizontal_keypoints_count], 7);
-		vert_intervals[8] = Curve(vert_intervals[7].end, keypoints[2 + 3 * horizontal_keypoints_count], 8);
 
 		// ќписание элементарных подобластей. ƒл€ рассматриваемой геометрии данные посто€нны:
 		// [1,стр. 461]
