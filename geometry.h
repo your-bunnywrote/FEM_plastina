@@ -1,4 +1,5 @@
 
+#pragma once
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 
@@ -16,6 +17,9 @@
 #include <math.h>
 
 using namespace std;
+
+// папка дл€ входных данных
+extern string input_folder;
 
 // “очка/узел
 class Point {
@@ -39,10 +43,9 @@ public:
 enum curve_type { line, arc };
 //  рива€/лини€
 class Curve {
-protected:
 
-	curve_type type;
 public:
+	curve_type type;
 	int num;
 	Point begin, end;
 	Point center;
@@ -66,7 +69,10 @@ public:
 class comp_domain {
 public:
 	int Nx, Ny;			// количество линий, ограничивающих подобласти
+	bool is_hole;
 	vector<Point> coords;	// вектор координат линий, ограничивающих подобласти
+	vector<vector<Curve>> vertical_curves;
+	vector<vector<Curve>> horizontal_curves;
 	double length;
 	double width;
 	double hole_radius;

@@ -1,12 +1,11 @@
 // fem.h - здесь объ€вл€етс€ производный от Ёлемента класс ѕр€моугольник, имеющий все необходимые
 // пол€ и методы дл€ работы с конечно-элементной моделью
-
+#pragma once
 #ifndef FEM_H
 #define FEM_H
 
 #include "Mesh.h"
 #include "MyMatrix.h"
-#include <functional>
 
 class block2x2;
 class block1x2;

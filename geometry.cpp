@@ -37,7 +37,7 @@ comp_domain::comp_domain() {
 	// через имеющиеся параметры вычисляются координаты остальных ключевых точек (середины дуг, их проекции на горизонтальные и вертикальные линии) и вносятся в структуру
 	// 
 
-	bool is_hole = false;
+	is_hole = false;
 	cout << "Define the presence of hole (0/1):" << endl;
 	cin >> is_hole;
 	if (is_hole)
@@ -148,67 +148,44 @@ void comp_domain::create_holegeom_info() {
 			}
 		}
 
-		vector<vector<Point>> horizontal_curves(vertical_keypoints_count);
-		for (int i = 0; i < horizontal_curves.size(); i++)
-			horizontal_curves[i].resize(horizontal_keypoints_count);
-
-
-		vector<vector<Point>> vertical_curves(horizontal_keypoints_count);
-		for (int i = 0; i < vertical_curves.size(); i++) {
-			vertical_curves[i].resize(vertical_keypoints_count);
-		}
-
-		// строим по ключевым точкам горизонтальные кривые
-		for (int i = 0; i < horizontal_curves.size(); i++) {
-			for (int j = 0; j < horizontal_curves[i].size(); j++) {
-				horizontal_curves[i][j] = keypoints[j + i * horizontal_keypoints_count];
-			}
-		}
-
-		// строим по клчючевым точкам вертикальные кривые
-		for (int i = 0; i < vertical_curves.size(); i++) {
-			for (int j = 0; j < vertical_curves[i].size(); j++) {
-				vertical_curves[i][j] = keypoints[i + j * horizontal_keypoints_count];
-			}
-		}
 
 
 		// test
 		curve_type type = arc;
 
-		vector<vector<Curve>> horizontal_lines(vertical_keypoints_count);
-		for (int i = 0; i < horizontal_lines.size(); i++) {
-			horizontal_lines[i].resize(horizontal_keypoints_count - 1);
+		horizontal_curves.resize(vertical_keypoints_count);
+		for (int i = 0; i < horizontal_curves.size(); i++) {
+			horizontal_curves[i].resize(horizontal_keypoints_count - 1);
 		}
 
 		int hor_interval_num = 0;
-		for (int i = 0; i < horizontal_lines.size(); i++) {
+		for (int i = 0; i < horizontal_curves.size(); i++) {
 			int j = 0;
 			int kp_index = i * horizontal_keypoints_count;
-			horizontal_lines[i][j] = Curve(keypoints[kp_index], keypoints[kp_index + 1], hor_interval_num++);
-			for (j = 1; j < horizontal_lines[i].size(); j++) {
+			horizontal_curves[i][j] = Curve(keypoints[kp_index], keypoints[kp_index + 1], hor_interval_num++);
+			for (j = 1; j < horizontal_curves[i].size(); j++) {
 				if ((i == 1 || i == 2) && j == 1)
-					horizontal_lines[i][j] = Curve(arc, hole_center, hole_radius, horizontal_lines[i][j - 1].end, keypoints[kp_index + 1 + j], hor_interval_num++);
+					horizontal_curves[i][j] = Curve(arc, hole_center, hole_radius, horizontal_curves[i][j - 1].end, keypoints[kp_index + 1 + j], hor_interval_num++);
 				else
-					horizontal_lines[i][j] = Curve(horizontal_lines[i][j - 1].end, keypoints[kp_index + 1 + j], hor_interval_num++);	// изменить формулу индексирования конечной точки
+					horizontal_curves[i][j] = Curve(horizontal_curves[i][j - 1].end, keypoints[kp_index + 1 + j], hor_interval_num++);	// изменить формулу индексирования конечной точки
 
 
 			}
 		}
 
-		vector<vector<Curve>> vertical_lines(horizontal_keypoints_count);
-		for (int i = 0; i < vertical_lines.size(); i++)
-			vertical_lines[i].resize(vertical_keypoints_count - 1);
+		vertical_curves.resize(horizontal_keypoints_count);
+		for (int i = 0; i < vertical_curves.size(); i++)
+			vertical_curves[i].resize(vertical_keypoints_count - 1);
 
 		int ver_interval_num = 0;
-		for (int i = 0; i < vertical_lines.size(); i++) {
+		for (int i = 0; i < vertical_curves.size(); i++) {
 			int j = 0;
-			vertical_lines[i][j] = Curve(keypoints[i], keypoints[i+horizontal_keypoints_count], ver_interval_num++);
-			for (j = 1; j < vertical_lines[i].size(); j++) {
+			vertical_curves[i][j] = Curve(keypoints[i], keypoints[i+horizontal_keypoints_count], ver_interval_num++);
+			for (j = 1; j < vertical_curves[i].size(); j++) {
 				if (i == 1 && j == 1)
-					vertical_lines[i][j] = Curve(arc, hole_center, hole_radius, keypoints[i + j * horizontal_keypoints_count], keypoints[i + (j + 1) * horizontal_keypoints_count], ver_interval_num++);
+					vertical_curves[i][j] = Curve(arc, hole_center, hole_radius, keypoints[i + j * horizontal_keypoints_count], keypoints[i + (j + 1) * horizontal_keypoints_count], ver_interval_num++);
 				else
-				vertical_lines[i][j] = Curve(keypoints[i + j * horizontal_keypoints_count], keypoints[i + (j + 1) * horizontal_keypoints_count], ver_interval_num++);
+				vertical_curves[i][j] = Curve(keypoints[i + j * horizontal_keypoints_count], keypoints[i + (j + 1) * horizontal_keypoints_count], ver_interval_num++);
 			}
 
 		}
@@ -222,7 +199,7 @@ void comp_domain::create_holegeom_info() {
 		int W_count = 3;
 		int mat = 1;
 		vector<pair<int, int>> vertical_curves_indeces{ {0,1},{1,2},{1,2} };
-		vector<pair<int, int>> horizontal_lines_indeces{ {0,3},{0,1},{2,3} };
+		vector<pair<int, int>> horizontal_curves_indeces{ {0,3},{0,1},{2,3} };
 
 		ofstream ofile(input_folder + "/curves_and_domains.txt");
 		ofile << horizontal_keypoints_count << " " << vertical_keypoints_count << endl;
@@ -234,7 +211,7 @@ void comp_domain::create_holegeom_info() {
 		ofile << W_count << endl;
 		int k = 0;
 		for (int i = 0; i < W_count; i++) {
-			ofile << mat << " " << vertical_curves_indeces[k].first << " " << vertical_curves_indeces[k].second << " " << horizontal_lines_indeces[k].first << " " << horizontal_lines_indeces[k].second << endl;
+			ofile << mat << " " << vertical_curves_indeces[k].first << " " << vertical_curves_indeces[k].second << " " << horizontal_curves_indeces[k].first << " " << horizontal_curves_indeces[k].second << endl;
 			k++;
 		}
 

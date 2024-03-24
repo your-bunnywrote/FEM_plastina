@@ -12,15 +12,15 @@
 
 // дл€ остального
 #include <time.h>
-#include <math.h>
-#include <cstdio>
+//#include <math.h>
+//#include <cstdio>
 #include <cstdlib>
 #include <cstdint>
 
 // файлы  Ёћ
-#include "Mesh.h"
+//#include "Mesh.h"
 #include "fem.h"
-#include "geometry.h"
+//#include "geometry.h"
 
 ofstream logfile;
 string output_folder = "test";

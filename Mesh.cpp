@@ -1,7 +1,9 @@
 // Mesh.cpp - определение всех функций и операторов, модуль для построения сетки
 // Основная литература - "Метод конечных элементов для решения скалярных и векторных задач" [1]
 
+
 #include "Mesh.h"
+
 
 
 vector<string> split(string& s, char delimeter) {
@@ -16,7 +18,6 @@ vector<string> split(string& s, char delimeter) {
 }
 
 
-//string input_folder = "test";
 
 // =======================================================================
 
@@ -76,75 +77,176 @@ Element::~Element() {
 
 //========================================================================
 
+void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
+	// вычисление координат по x
+	int x_size = (accumulate(nx.begin(), nx.end(), 0) + 1) + (ny[1] - 1) * nx[0];	// сумма кол-ва горизонтальнх подынтервалов + 1, и еще (ny[1] - 1) * nx[0] координат, необходимых из-за смещения узлов дугой
+	x.resize(x_size);
+	double hx=0,
+		hy=0,
+		sum = 0;
+	double phi = 0;
+	// необходимо учитывать, какой интервал бьем: основной или дочерний (образованный параметрами разбиения y - линий), скорее всего, координаты дочерних интервалов придется считать после основных
+	// бьем основные горизонтальные интервалы
+	for (int k = 0; k < subdomain.horizontal_curves.size(); k++) {
+		for (int j = 0; j < subdomain.horizontal_curves[k].size(); j++) {
+			Curve current_hor_interval = subdomain.horizontal_curves[k][j];
+			sum = 0;
+			int g_index = accumulate(nx.begin(), nx.begin() + j, 0);
+			for (int i = 0; i < nx[j]; i++) {
+				sum += pow(kx[j], i);
+			}
+			if (current_hor_interval.type == arc) {
+				double r = subdomain.hole_radius;
+				phi = M_PI_4 / nx[j];
+				hx = ((current_hor_interval.end.x - current_hor_interval.begin.x) / sum) * cos(phi);
+			}
+			else
+				hx = (current_hor_interval.end.x - current_hor_interval.begin.x) / sum;
+			x[g_index] = current_hor_interval.begin.x;
+			for (int i = 1; i <= nx[j]; i++) {
+				x[i + g_index] = x[i - 1 + g_index] + hx;
+				hx *= kx[j];
+			}
+			x[g_index + nx[j]] = current_hor_interval.end.x;	// округляем посчитанную координату узла на границе подобластей до точной координаты границы (чтобы избежать значения в формате .000000001)
+
+		}
+	}
+
+	int y_size = (accumulate(ny.begin(), ny.end(), 0) + 1) + (nx[1] - 1) * ny[0] * 2;	// сумма кол-ва вертикальных подынтервалов + 1, и еще (nx[1] - 1) * ny[0] * 2 координат, необходимых из-за симметричного смещения узлов дугами
+	y.resize(y_size);
+	// бьем основные вертикальные интервалы, необходимо учесть тип кривой
+	for (int k = 0; k < subdomain.vertical_curves.size(); k++) {
+		for (int j = 0; j < subdomain.vertical_curves[k].size(); j++) {
+			sum = 0;
+			int g_index = accumulate(ny.begin(), ny.begin() + j, 0);
+			for (int i = 0; i < ny[j]; i++) {
+				sum += pow(ky[j], i);
+			}
+			hx = (subdomain.vertical_curves[k][j].end.y - subdomain.vertical_curves[k][j].begin.y) / sum;
+			y[g_index] = subdomain.vertical_curves[k][j].begin.y;
+			for (int i = 1; i <= ny[j]; i++) {
+				y[i + g_index] = y[i - 1 + g_index] + hx;
+				hx *= ky[j];
+			}
+			y[g_index + ny[j]] = subdomain.vertical_curves[k][j].end.y;	// округляем посчитанную координату узла на границе подобластей до точной координаты границы (чтобы избежать значения в формате .000000001)
+
+		}
+	}
+	
+	// вычисляем координаты узлов, образованных дочерними ортогональным линиями
+
+}
 
 
 // =======================================================================
 
 void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	// информация о разбиении областей
-	mesh.subdomain;
+	//mesh.subdomain;
 	ifstream Xmsh, Ymsh;
-	// x
-	//Xmsh.open( input_folder + "/partition_info_x.txt");
 	string line;
-	while (getline(Xmsh, line)) {
-		vector<string> tokens = split(line, '\t');
-		mesh.nx.push_back(stoi(tokens.at(0)));
-		mesh.kx.push_back(stod(tokens.at(1)));		// k>0 - каждый следующий интервал больше предыдущего в k раз
-													// k<0 - каждый следующий интервал меньше предыдущего в k раз (т. е. больше предыдущего в 1/k раз)
-		if (mesh.kx[mesh.kx.size() - 1] < 0) {
-			mesh.kx[mesh.kx.size() - 1] = 1 / abs(mesh.kx[mesh.kx.size() - 1]);
-		}
-	}
-	Xmsh.close();
-	line.clear();
-	// y
-	//Ymsh.open( input_folder + "/partition_info_y.txt");
-	while (getline(Ymsh, line)) {
-		vector<string> tokens = split(line, '\t');
-		mesh.ny.push_back(stoi(tokens.at(0)));
-		mesh.ky.push_back(stod(tokens.at(1)));
-		if (mesh.ky[mesh.ky.size() - 1] < 0) {
-			mesh.ky[mesh.ky.size() - 1] = 1 / abs(mesh.ky[mesh.ky.size() - 1]);
-		}
-	}
-	Ymsh.close();
-	line.clear();
-	// считаем координаты узлов
-	// по x
 	vector<double> x, y;
 	double hx, hy, sum;
-	x.resize(accumulate(mesh.nx.begin(), mesh.nx.end(), 0) + 1);
-	for (size_t j = 0; j < mesh.nx.size(); j++) {
-		sum = 0;
-		int g_index = accumulate(mesh.nx.begin(), mesh.nx.begin() + j, 0);
-		for (int i = 0; i < mesh.nx[j]; i++) {
-			sum += pow(mesh.kx[j], i);
+	// чтение параметров разбиения и вычисление координат узлов с круглым отверстием
+	if (mesh.subdomain.is_hole) {
+		// чтение файлов с параметрами разбиения
+		Xmsh.open(input_folder + "/partition_info_x_holed.txt");
+		while (getline(Xmsh, line)) {
+			vector<string> tokens = split(line, '\t');
+			mesh.nx.push_back(stoi(tokens.at(0)));
+			mesh.kx.push_back(stod(tokens.at(1)));		// k>0 - каждый следующий интервал больше предыдущего в k раз
+			// k<0 - каждый следующий интервал меньше предыдущего в k раз (т. е. больше предыдущего в 1/k раз)
+			if (mesh.kx[mesh.kx.size() - 1] < 0) {
+				mesh.kx[mesh.kx.size() - 1] = 1 / abs(mesh.kx[mesh.kx.size() - 1]);
+			}
 		}
-		hx = (mesh.subdomain.coords[j + 1].x - mesh.subdomain.coords[j].x) / sum;
-		x[g_index] = (mesh.subdomain.coords[j].x);
-		for (int i = 1; i <= mesh.nx[j]; i++) {
-			x[i + g_index] = x[i - 1 + g_index] + hx;
-			hx *= mesh.kx[j];
+		Xmsh.close();
+		line.clear();
+		// y
+		Ymsh.open(input_folder + "/partition_info_y_holed.txt");
+		while (getline(Ymsh, line)) {
+			vector<string> tokens = split(line, '\t');
+			mesh.ny.push_back(stoi(tokens.at(0)));
+			mesh.ky.push_back(stod(tokens.at(1)));
+			if (mesh.ky[mesh.ky.size() - 1] < 0) {
+				mesh.ky[mesh.ky.size() - 1] = 1 / abs(mesh.ky[mesh.ky.size() - 1]);
+			}
 		}
-		x[g_index + mesh.nx[j]] = mesh.subdomain.coords[j+1].x;	// округляем посчитанную координату узла на границе подобластей до точной координаты границы (чтобы избежать значения в формате .000000001)
+		Ymsh.close();
+		line.clear();
+
+		// вычисление координат узлов
+		mesh.calculate_coords(x, y);
+
+
+
+
+
 	}
-	// по y
-	y.resize(accumulate(mesh.ny.begin(), mesh.ny.end(), 0) + 1);
-	for (size_t j = 0; j < mesh.ny.size(); j++) {
-		sum = 0;
-		int g_index = accumulate(mesh.ny.begin(), mesh.ny.begin() + j, 0);
-		for (int i = 0; i < mesh.ny[j]; i++) {
-			sum += pow(mesh.ky[j], i);
+	// чтение параметров разбиения и вычисление координат узлов для панели с прямоугольным отверстием
+	else {
+		// чтение файлов с разбиением
+		// x
+		Xmsh.open( input_folder + "/partition_info_x.txt");
+		while (getline(Xmsh, line)) {
+			vector<string> tokens = split(line, '\t');
+			mesh.nx.push_back(stoi(tokens.at(0)));
+			mesh.kx.push_back(stod(tokens.at(1)));		// k>0 - каждый следующий интервал больше предыдущего в k раз
+			// k<0 - каждый следующий интервал меньше предыдущего в k раз (т. е. больше предыдущего в 1/k раз)
+			if (mesh.kx[mesh.kx.size() - 1] < 0) {
+				mesh.kx[mesh.kx.size() - 1] = 1 / abs(mesh.kx[mesh.kx.size() - 1]);
+			}
 		}
-		hy = (mesh.subdomain.coords[j + 1].y - mesh.subdomain.coords[j].y) / sum;
-		y[g_index] = (mesh.subdomain.coords[j].y);
-		for (int i = 1; i <= mesh.ny[j]; i++) {
-			y[i + g_index] = y[i - 1 + g_index] + hy;
-			hy *= mesh.ky[j];
+		Xmsh.close();
+		line.clear();
+		// y
+		Ymsh.open( input_folder + "/partition_info_y.txt");
+		while (getline(Ymsh, line)) {
+			vector<string> tokens = split(line, '\t');
+			mesh.ny.push_back(stoi(tokens.at(0)));
+			mesh.ky.push_back(stod(tokens.at(1)));
+			if (mesh.ky[mesh.ky.size() - 1] < 0) {
+				mesh.ky[mesh.ky.size() - 1] = 1 / abs(mesh.ky[mesh.ky.size() - 1]);
+			}
 		}
-		y[g_index + mesh.ny[j]] = mesh.subdomain.coords[j + 1].y;
+		Ymsh.close();
+		line.clear();
+		// считаем координаты узлов
+		// по x
+		x.resize(accumulate(mesh.nx.begin(), mesh.nx.end(), 0) + 1);
+		for (size_t j = 0; j < mesh.nx.size(); j++) {
+			sum = 0;
+			int g_index = accumulate(mesh.nx.begin(), mesh.nx.begin() + j, 0);
+			for (int i = 0; i < mesh.nx[j]; i++) {
+				sum += pow(mesh.kx[j], i);
+			}
+			hx = (mesh.subdomain.coords[j + 1].x - mesh.subdomain.coords[j].x) / sum;
+			x[g_index] = (mesh.subdomain.coords[j].x);
+			for (int i = 1; i <= mesh.nx[j]; i++) {
+				x[i + g_index] = x[i - 1 + g_index] + hx;
+				hx *= mesh.kx[j];
+			}
+			x[g_index + mesh.nx[j]] = mesh.subdomain.coords[j + 1].x;	// округляем посчитанную координату узла на границе подобластей до точной координаты границы (чтобы избежать значения в формате .000000001)
+		}
+		// по y
+		y.resize(accumulate(mesh.ny.begin(), mesh.ny.end(), 0) + 1);
+		for (size_t j = 0; j < mesh.ny.size(); j++) {
+			sum = 0;
+			int g_index = accumulate(mesh.ny.begin(), mesh.ny.begin() + j, 0);
+			for (int i = 0; i < mesh.ny[j]; i++) {
+				sum += pow(mesh.ky[j], i);
+			}
+			hy = (mesh.subdomain.coords[j + 1].y - mesh.subdomain.coords[j].y) / sum;
+			y[g_index] = (mesh.subdomain.coords[j].y);
+			for (int i = 1; i <= mesh.ny[j]; i++) {
+				y[i + g_index] = y[i - 1 + g_index] + hy;
+				hy *= mesh.ky[j];
+			}
+			y[g_index + mesh.ny[j]] = mesh.subdomain.coords[j + 1].y;
+		}
 	}
+
+
 
 	// заполняем вектор узлов
 	mesh.nodes.resize(x.size() * y.size());
@@ -177,7 +279,7 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	}
 	// учет пустот в геометрии: удаление ненужных узлов и элементов, их перенумерация
 	// удаление узлов и перенумерация оставшихся
-	Mesh NewMesh;
+	Mesh NewMesh;		// входит в конструктор comp_domain и снова запрашивает наличие отверстия - ИСПРАВИТЬ!
 	bool is_remove_node = false;
 	uint32_t removed_nodes = 0;
 	mesh.num_nodes_in_new_mesh.resize(mesh.nodes.size());
