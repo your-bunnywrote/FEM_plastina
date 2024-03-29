@@ -22,7 +22,7 @@ public:
 class Element {
 public:
 	enum etype { RECTANGLE, QUADRILATERAL };
-	Point* loc_nodes;
+	vector<Point> loc_nodes;
 	size_t num;
 	Material mat;
 	// –≈ƒј “»–ќ¬ј“№: можно заменить на обычный двумерный массив
@@ -33,7 +33,6 @@ public:
 	//											D  = ------	|mu 1	 0	  |
 	//												 1-mu^2 |0  0 (1-mu)/2|
 	Element();
-	~Element();
 };
 
 

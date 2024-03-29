@@ -69,71 +69,152 @@ Point Point::operator/(double val) {
 }
 
 Element::Element() {
-	loc_nodes = new Point[4];
+	loc_nodes.resize(4);
 }
-Element::~Element() {
-	delete[] loc_nodes;
-}
+
 
 //========================================================================
 
 void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
-	// вычисление координат по x
-	int x_size = (accumulate(nx.begin(), nx.end(), 0) + 1) + (ny[1] - 1) * nx[0];	// сумма кол-ва горизонтальнх подынтервалов + 1, и еще (ny[1] - 1) * nx[0] координат, необходимых из-за смещения узлов дугой
+
+	// Этап 1: бьем основные кривые
+	// есть три метода:
+	// первый: в каждом массиве координат столько элементов, сколько всего узлов,
+	// т.е. для каждого узла хранится своя координата в массиве координат (даже если у нескольких узлов одинаковая координата), это увеличивает объем массивов x и y, но упрощает их обработку
+	// 
+	// второй: в массивах координат содержатся только уникальные значения координат, это уменьшает объем массивов, но усложняет алгоритм обработки этих массивов и приведения в соответствие координат узлам
+	// 
+	// третий: размер массива координат равен числу подынтервалов + 1, на каждом шаге цикла по интервалам вычисляются значения координат и тут же заносятся в список координат узлов
+	// это уменьшает объем массивов и упрощает алгоритм работы с массивом координат и занесение их в список узлов
+	// будем пользоваться третьим методом
+
+
+	int x_size = (accumulate(nx.begin(), nx.end(), 0) + 1);	// сумма кол-ва горизонтальнх подынтервалов + 1
+	int y_size = (accumulate(ny.begin(), ny.end(), 0) + 1);	// сумма кол-ва вертикальных подынтервалов + 1
+	nodes.resize(x_size * y_size);
 	x.resize(x_size);
-	double hx=0,
-		hy=0,
-		sum = 0;
+	y.resize(y_size);
+	double hx = 0,
+		hy = 0,
+		sum_kx = 0,
+		sum_ky = 0;
+	// для полярных координат
 	double phi = 0;
-	// необходимо учитывать, какой интервал бьем: основной или дочерний (образованный параметрами разбиения y - линий), скорее всего, координаты дочерних интервалов придется считать после основных
-	// бьем основные горизонтальные интервалы
+	double r = subdomain.hole_radius;
+
+	int nodenum = 1;
+	int node_index = 0;
+	// располагаем узлы на основных горизонтальных кривых
 	for (int k = 0; k < subdomain.horizontal_curves.size(); k++) {
+		if (k >= 1)
+			nodenum = x_size * ny[k - 1] * k + 1;
 		for (int j = 0; j < subdomain.horizontal_curves[k].size(); j++) {
 			Curve current_hor_interval = subdomain.horizontal_curves[k][j];
-			sum = 0;
+			sum_kx = 0;
 			int g_index = accumulate(nx.begin(), nx.begin() + j, 0);
 			for (int i = 0; i < nx[j]; i++) {
-				sum += pow(kx[j], i);
+				sum_kx += pow(kx[j], i);
 			}
-			if (current_hor_interval.type == arc) {
-				double r = subdomain.hole_radius;
-				phi = M_PI_4 / nx[j];
-				hx = ((current_hor_interval.end.x - current_hor_interval.begin.x) / sum) * cos(phi);
-			}
-			else
-				hx = (current_hor_interval.end.x - current_hor_interval.begin.x) / sum;
+			
+			hx = (current_hor_interval.end.x - current_hor_interval.begin.x) / sum_kx;	// первый шаг по х
+			phi = M_PI_4 / sum_kx;														// первый угловой шаг
 			x[g_index] = current_hor_interval.begin.x;
+
+			node_index = nodenum - 1;
+			nodes[node_index].x = x[g_index];
+			nodes[node_index].y = current_hor_interval.begin.y;
+			nodes[node_index].num = nodenum;
 			for (int i = 1; i <= nx[j]; i++) {
-				x[i + g_index] = x[i - 1 + g_index] + hx;
+
+				if (current_hor_interval.type == arc) {
+					// строки для правильного вычисления x-координаты узлов на дуге, принадлежащей горизонтальной кривой
+					// разница в координатах небольшая, но для упрощения вычисления координат вспомогательных узлов координаты на дуге и прямой остаются одинаковыми
+					//x[i + g_index] = current_hor_interval.center.x - r * cos(M_PI_4 + phi * i);
+					//nodes[i + node_index].x = x[i + g_index];
+					nodes[i + node_index].y = current_hor_interval.center.y + r * sin(M_PI + pow(-1, k+1) * (M_PI_4 + phi * i)); // отнимаем или прибавляем угол к pi в зависимости от того, на какой горизонтальной линии находимся
+					phi *= kx[j];
+				}
+				else {
+					//x[i + g_index] = x[i - 1 + g_index] + hx;
+					//nodes[i + node_index].x = x[i + g_index];
+					nodes[i + node_index].y = current_hor_interval.begin.y;
+				}
+					x[i + g_index] = x[i - 1 + g_index] + hx;
+					nodes[i + node_index].x = x[i + g_index];
+				nodes[i + node_index].num = ++nodenum;
 				hx *= kx[j];
 			}
 			x[g_index + nx[j]] = current_hor_interval.end.x;	// округляем посчитанную координату узла на границе подобластей до точной координаты границы (чтобы избежать значения в формате .000000001)
+			nodes[node_index + nx[j]].x = x[g_index + nx[j]];
 
 		}
 	}
 
-	int y_size = (accumulate(ny.begin(), ny.end(), 0) + 1) + (nx[1] - 1) * ny[0] * 2;	// сумма кол-ва вертикальных подынтервалов + 1, и еще (nx[1] - 1) * ny[0] * 2 координат, необходимых из-за симметричного смещения узлов дугами
-	y.resize(y_size);
-	// бьем основные вертикальные интервалы, необходимо учесть тип кривой
+	nodenum = 1;
+	// бьем основные вертикальные интервалы
 	for (int k = 0; k < subdomain.vertical_curves.size(); k++) {
+		if (k >= 1)
+			nodenum = accumulate(nx.begin(), nx.begin() + k, 0) + 1;
 		for (int j = 0; j < subdomain.vertical_curves[k].size(); j++) {
-			sum = 0;
+			Curve current_vert_interval = subdomain.vertical_curves[k][j];
+			sum_ky = 0;
 			int g_index = accumulate(ny.begin(), ny.begin() + j, 0);
 			for (int i = 0; i < ny[j]; i++) {
-				sum += pow(ky[j], i);
+				sum_ky += pow(ky[j], i);
 			}
-			hx = (subdomain.vertical_curves[k][j].end.y - subdomain.vertical_curves[k][j].begin.y) / sum;
+			hy = (subdomain.vertical_curves[k][j].end.y - subdomain.vertical_curves[k][j].begin.y) / sum_ky;
+			phi = M_PI_2 / sum_ky;
 			y[g_index] = subdomain.vertical_curves[k][j].begin.y;
+			
+
+			node_index = nodenum - 1;
+			nodes[node_index].y = y[g_index];
+			nodes[node_index].num = nodenum;
 			for (int i = 1; i <= ny[j]; i++) {
-				y[i + g_index] = y[i - 1 + g_index] + hx;
-				hx *= ky[j];
+				node_index += x_size;
+				nodenum += x_size;
+				if (current_vert_interval.type == arc) {
+					nodes[node_index].x = current_vert_interval.center.x - r * cos(M_PI_4 - phi * i);
+					phi *= ky[j];
+				}
+				else 
+					nodes[node_index].x = (k == 0) ? x[k] : (x[nx[k - 1] * k]);
+				y[i + g_index] = y[i - 1 + g_index] + hy;
+
+				nodes[node_index].y = y[i + g_index];
+				nodes[node_index].num = nodenum;
+				hy *= ky[j];
 			}
 			y[g_index + ny[j]] = subdomain.vertical_curves[k][j].end.y;	// округляем посчитанную координату узла на границе подобластей до точной координаты границы (чтобы избежать значения в формате .000000001)
-
+			//nodes[node_index + ny[j]].y = y[g_index + ny[j]];
 		}
 	}
 	
-	// вычисляем координаты узлов, образованных дочерними ортогональным линиями
+	// ЭТАП 2: вычисляем координаты непронумерованных вспомогательных узлов, 
+	// координаты вспомогательных узлов вычисляются через уже имеющиеся координаты узлов основных линий, между которыми он лежит
+
+	int node_inc = 0;
+	for (int i = 0; i < nodes.size(); i++) {
+		if (nodes[i].num == 0) {	// первый вспомогательный узел по горизонтали
+			for (int j = 0; j < ny.size(); j++) {
+				sum_ky = 0;
+				for (int l = 0; l < ny[j]; l++) {
+					sum_ky += pow(ky[j], l);
+				}
+
+				for (int k = 0; k < nx.size(); k++) {
+					sum_kx = 0;
+					for (int l = 0; l < nx[k]; l++) {
+						sum_kx += pow(kx[k], l);
+					}
+					nodes[i].x = (nodes[i - 1 + nx[k]].x - nodes[i - 1].x) / sum_kx + nodes[i - 1].x;
+					nodes[i].y = (nodes[i + x.size()].y - nodes[i - x.size()].y) / sum_ky + nodes[i - x.size()].y;
+					nodes[i].num = nodes[i - 1].num + 1;
+				}
+			}
+		}
+	}
+
 
 }
 
@@ -244,19 +325,16 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 			}
 			y[g_index + mesh.ny[j]] = mesh.subdomain.coords[j + 1].y;
 		}
-	}
-
-
-
-	// заполняем вектор узлов
-	mesh.nodes.resize(x.size() * y.size());
-	size_t nodenum = 0;
-	for (size_t j = 0; j < y.size(); j++) {
-		for (size_t i = 0; i < x.size(); i++) {
-			mesh.nodes[i + j * x.size()].x = x[i];
-			mesh.nodes[i + j * x.size()].y = y[j];
-			mesh.nodes[i + j * x.size()].num = nodenum + 1;
-			nodenum++;
+		// заполняем вектор узлов
+		mesh.nodes.resize(x.size() * y.size());
+		size_t nodenum = 0;
+		for (size_t j = 0; j < y.size(); j++) {
+			for (size_t i = 0; i < x.size(); i++) {
+				mesh.nodes[i + j * x.size()].x = x[i];
+				mesh.nodes[i + j * x.size()].y = y[j];
+				mesh.nodes[i + j * x.size()].num = nodenum + 1;
+				nodenum++;
+			}
 		}
 	}
 
@@ -268,10 +346,16 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	mesh.elements.resize((x.size() - 1) * (y.size() - 1));
 	for (size_t j = 0; j < y.size() - 1; j++) {
 		for (size_t i = 0; i < x.size() - 1; i++) {
-			mesh.elements[i + j * (x.size() - 1)].loc_nodes[0] = Point(x[i], y[j], mesh.nodes[i + j * x.size()].num);
-			mesh.elements[i + j * (x.size() - 1)].loc_nodes[1] = Point(x[i + 1], y[j], mesh.nodes[i + 1 + j * x.size()].num);
-			mesh.elements[i + j * (x.size() - 1)].loc_nodes[2] = Point(x[i + 1], y[j + 1], mesh.nodes[i + 1 + (j + 1) * x.size()].num);
-			mesh.elements[i + j * (x.size() - 1)].loc_nodes[3] = Point(x[i], y[j + 1], mesh.nodes[i + (j + 1) * x.size()].num);
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[0] = mesh.nodes[i + j * x.size()];
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[1] = mesh.nodes[i + 1 + j * x.size()];
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[2] = mesh.nodes[i + 1 + (j + 1) * x.size()];
+			mesh.elements[i + j * (x.size() - 1)].loc_nodes[3] = mesh.nodes[i + (j + 1) * x.size()];
+
+			// для прямоугольной сетки
+			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[0] = Point(x[i], y[j], mesh.nodes[i + j * x.size()].num);
+			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[1] = Point(x[i + 1], y[j], mesh.nodes[i + 1 + j * x.size()].num);
+			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[2] = Point(x[i + 1], y[j + 1], mesh.nodes[i + 1 + (j + 1) * x.size()].num);
+			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[3] = Point(x[i], y[j + 1], mesh.nodes[i + (j + 1) * x.size()].num);
 			mesh.elements[i + j * (x.size() - 1)].mat.num = 1;
 			mesh.elements[i + j * (x.size() - 1)].num = elemnum + 1;
 			elemnum++;
@@ -279,72 +363,72 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	}
 	// учет пустот в геометрии: удаление ненужных узлов и элементов, их перенумерация
 	// удаление узлов и перенумерация оставшихся
-	Mesh NewMesh;		// входит в конструктор comp_domain и снова запрашивает наличие отверстия - ИСПРАВИТЬ!
-	bool is_remove_node = false;
-	uint32_t removed_nodes = 0;
-	mesh.num_nodes_in_new_mesh.resize(mesh.nodes.size());
-	fill(mesh.num_nodes_in_new_mesh.begin(), mesh.num_nodes_in_new_mesh.end(), 0);
-	// помечаем узлы на удаление
-	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		is_remove_node = !mesh.subdomain.is_contain(mesh.nodes[i]);
-		if (is_remove_node) {
-			mesh.nodes[i].num = 0;
-		}
-	}
-	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].num == 0) {
-			removed_nodes++;
-			continue;
-		}
-		else {
-			NewMesh.nodes.push_back(mesh.nodes[i]);
-			NewMesh.nodes[NewMesh.nodes.size() - 1].num -= removed_nodes;
-			mesh.num_nodes_in_new_mesh[mesh.nodes[i].num - 1] = mesh.nodes[i].num - removed_nodes;
-		}
-	}
-	mesh.nodes = NewMesh.nodes;
+	//Mesh NewMesh;		// входит в конструктор comp_domain и снова запрашивает наличие отверстия - ИСПРАВИТЬ!
+	//bool is_remove_node = false;
+	//uint32_t removed_nodes = 0;
+	//mesh.num_nodes_in_new_mesh.resize(mesh.nodes.size());
+	//fill(mesh.num_nodes_in_new_mesh.begin(), mesh.num_nodes_in_new_mesh.end(), 0);
+	//// помечаем узлы на удаление
+	//for (size_t i = 0; i < mesh.nodes.size(); i++) {
+	//	is_remove_node = !mesh.subdomain.is_contain(mesh.nodes[i]);
+	//	if (is_remove_node) {
+	//		mesh.nodes[i].num = 0;
+	//	}
+	//}
+	//for (size_t i = 0; i < mesh.nodes.size(); i++) {
+	//	if (mesh.nodes[i].num == 0) {
+	//		removed_nodes++;
+	//		continue;
+	//	}
+	//	else {
+	//		NewMesh.nodes.push_back(mesh.nodes[i]);
+	//		NewMesh.nodes[NewMesh.nodes.size() - 1].num -= removed_nodes;
+	//		mesh.num_nodes_in_new_mesh[mesh.nodes[i].num - 1] = mesh.nodes[i].num - removed_nodes;
+	//	}
+	//}
+	//mesh.nodes = NewMesh.nodes;
 
-	// удаление лишних элементов, перенумерация оставшихся и перенумерация локальных узлов с учетом удаленных
-	removed_nodes = 0;
-	uint32_t old_num_node;
-	uint32_t new_num_node;
-	uint32_t removed_elements = 0;
-	bool is_remove_elem;
-	// помечаем элементы на удаление
-	for (size_t i = 0; i < mesh.elements.size(); i++) {
-		is_remove_elem = false;
-		for (size_t j = 0; j < 4; j++) {
-			is_remove_elem = !mesh.subdomain.is_contain(mesh.elements[i].loc_nodes[j]);
-			if (is_remove_elem) {
-				is_remove_elem = true;
-				mesh.elements[i].mat.num = 0;
-				break;
-			}
-		}
-	}
+	//// удаление лишних элементов, перенумерация оставшихся и перенумерация локальных узлов с учетом удаленных
+	//removed_nodes = 0;
+	//uint32_t old_num_node;
+	//uint32_t new_num_node;
+	//uint32_t removed_elements = 0;
+	//bool is_remove_elem;
+	//// помечаем элементы на удаление
+	//for (size_t i = 0; i < mesh.elements.size(); i++) {
+	//	is_remove_elem = false;
+	//	for (size_t j = 0; j < 4; j++) {
+	//		is_remove_elem = !mesh.subdomain.is_contain(mesh.elements[i].loc_nodes[j]);
+	//		if (is_remove_elem) {
+	//			is_remove_elem = true;
+	//			mesh.elements[i].mat.num = 0;
+	//			break;
+	//		}
+	//	}
+	//}
 
-	// перенумерация локальных узлов элементов
-	for (size_t i = 0; i < mesh.elements.size(); i++) {
-		if (mesh.elements[i].mat.num == 0) {
-			for (size_t j = 2; j < 4; j++) {
-				if (!mesh.subdomain.is_contain(mesh.elements[i].loc_nodes[j])) {
-					removed_nodes++;
-					break;
-				}
-			}
-			removed_elements++;
-		}
-		else {
-			NewMesh.elements.push_back(mesh.elements[i]);
-			NewMesh.elements[NewMesh.elements.size() - 1].num -= removed_elements;
-			for (size_t j = 0; j < 4; j++) {
-				old_num_node = NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num;
-				new_num_node = mesh.num_nodes_in_new_mesh[old_num_node - 1];
-				NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num = new_num_node;
-			}
-		}
-	}
-	mesh.elements = NewMesh.elements;
+	//// перенумерация локальных узлов элементов
+	//for (size_t i = 0; i < mesh.elements.size(); i++) {
+	//	if (mesh.elements[i].mat.num == 0) {
+	//		for (size_t j = 2; j < 4; j++) {
+	//			if (!mesh.subdomain.is_contain(mesh.elements[i].loc_nodes[j])) {
+	//				removed_nodes++;
+	//				break;
+	//			}
+	//		}
+	//		removed_elements++;
+	//	}
+	//	else {
+	//		NewMesh.elements.push_back(mesh.elements[i]);
+	//		NewMesh.elements[NewMesh.elements.size() - 1].num -= removed_elements;
+	//		for (size_t j = 0; j < 4; j++) {
+	//			old_num_node = NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num;
+	//			new_num_node = mesh.num_nodes_in_new_mesh[old_num_node - 1];
+	//			NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num = new_num_node;
+	//		}
+	//	}
+	//}
+	//mesh.elements = NewMesh.elements;
 
 	// выгружаем данные сетки в файлы
 	ofstream out;
