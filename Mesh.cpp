@@ -107,7 +107,7 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 	// располагаем узлы на основных горизонтальных кривых
 	for (int k = 0; k < subdomain.horizontal_curves.size(); k++) {
 		if (k >= 1)
-			nodenum = x_size * ny[k - 1] * k + 1;
+			nodenum = x_size * accumulate(ny.begin(), ny.begin() + k, 0) + 1;
 		for (int j = 0; j < subdomain.horizontal_curves[k].size(); j++) {
 			Curve current_hor_interval = subdomain.horizontal_curves[k][j];
 			sum_kx = 0;
@@ -177,8 +177,8 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 					nodes[node_index].x = current_vert_interval.center.x - r * cos(M_PI_4 - phi * i);
 					phi *= ky[j];
 				}
-				else 
-					nodes[node_index].x = (k == 0) ? x[k] : (x[nx[k - 1] * k]);
+				else
+					nodes[node_index].x = x[accumulate(nx.begin(), nx.begin() + k, 0)];
 				y[i + g_index] = y[i - 1 + g_index] + hy;
 
 				nodes[node_index].y = y[i + g_index];
@@ -192,26 +192,49 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 	
 	// ЭТАП 2: вычисляем координаты непронумерованных вспомогательных узлов, 
 	// координаты вспомогательных узлов вычисляются через уже имеющиеся координаты узлов основных линий, между которыми он лежит
-
-	int node_inc = 0;
+	int j = 0;
+	int y_ind = 0;
 	for (int i = 0; i < nodes.size(); i++) {
 		if (nodes[i].num == 0) {	// первый вспомогательный узел по горизонтали
-			for (int j = 0; j < ny.size(); j++) {
+			//for (int j = 0; j < ny.size(); j++) {
+				int node_inc = 0;
 				sum_ky = 0;
 				for (int l = 0; l < ny[j]; l++) {
 					sum_ky += pow(ky[j], l);
-				}
 
-				for (int k = 0; k < nx.size(); k++) {
-					sum_kx = 0;
-					for (int l = 0; l < nx[k]; l++) {
-						sum_kx += pow(kx[k], l);
-					}
-					nodes[i].x = (nodes[i - 1 + nx[k]].x - nodes[i - 1].x) / sum_kx + nodes[i - 1].x;
-					nodes[i].y = (nodes[i + x.size()].y - nodes[i - x.size()].y) / sum_ky + nodes[i - x.size()].y;
-					nodes[i].num = nodes[i - 1].num + 1;
 				}
-			}
+				//if (j == 0)
+				//hy = (nodes[i + x.size()].y - nodes[i - x.size()].y) / sum_ky;
+				for (y_ind = 0; y_ind < ny[j]-1;) {
+					for (int k = 0; k < nx.size(); k++) {
+						sum_kx = 0;
+						for (int l = 0; l < nx[k]; l++) {
+							sum_kx += pow(kx[k], l);
+						}
+
+						node_inc = accumulate(nx.begin(), nx.begin() + k, 0);
+
+						if (k == 0)
+							hx = (nodes[i - 1 + nx[k]].x - nodes[i - 1].x) / sum_kx;
+						else
+							hx = (nodes[i + node_inc - 1 + nx[k]].x - nodes[i + node_inc - 1].x) / sum_kx;
+
+						for (; node_inc < accumulate(nx.begin(), nx.begin() + k + 1, 0);) {
+							//if(y_ind==0)
+							hy = (nodes[i + node_inc + x.size()*(ny[j]-1)].y - nodes[i + node_inc + x.size()*y_ind - x.size() * (y_ind + 1)].y) / sum_ky;
+							nodes[i + node_inc + x.size() * y_ind].x = hx + nodes[i - 1 + node_inc + x.size() * y_ind].x;
+							nodes[i + node_inc + x.size() * y_ind].y = hy + nodes[i - x.size() + node_inc + x.size() * y_ind].y;
+							nodes[i + node_inc + x.size() * y_ind].num = nodes[i + node_inc + x.size() * y_ind - 1].num + 1;
+							hx *= kx[k];
+							node_inc++;
+						}
+					}
+					y_ind++;
+					hy *= ky[j];
+				}
+				//i += x.size();
+			//}
+				j++;
 		}
 	}
 
