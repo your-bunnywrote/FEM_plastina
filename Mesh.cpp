@@ -193,7 +193,7 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 	// ЭТАП 2: вычисляем координаты непронумерованных вспомогательных узлов, 
 	// координаты вспомогательных узлов вычисляются через уже имеющиеся координаты узлов основных линий, между которыми он лежит
 	int j = 0;
-	int y_ind = 0;
+	int node_offset = 0;
 	for (int i = 0; i < nodes.size(); i++) {
 		if (nodes[i].num == 0) {	// первый вспомогательный узел по горизонтали
 			//for (int j = 0; j < ny.size(); j++) {
@@ -205,26 +205,27 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 				}
 				//if (j == 0)
 				//hy = (nodes[i + x.size()].y - nodes[i - x.size()].y) / sum_ky;
-				for (y_ind = 0; y_ind < ny[j]-1;) {
+				for (int y_ind = 0; y_ind < ny[j]-1;) {
 					for (int k = 0; k < nx.size(); k++) {
+						node_offset = x.size() * y_ind;
 						sum_kx = 0;
 						for (int l = 0; l < nx[k]; l++) {
 							sum_kx += pow(kx[k], l);
 						}
 
 						node_inc = accumulate(nx.begin(), nx.begin() + k, 0);
-
+						
 						if (k == 0)
-							hx = (nodes[i - 1 + nx[k]].x - nodes[i - 1].x) / sum_kx;
+							hx = (nodes[i - 1 + nx[k] + node_offset].x - nodes[i - 1 + node_offset].x) / sum_kx;
 						else
-							hx = (nodes[i + node_inc - 1 + nx[k]].x - nodes[i + node_inc - 1].x) / sum_kx;
+							hx = (nodes[i + node_inc - 1 + nx[k] + node_offset].x - nodes[i + node_inc - 1 + node_offset].x) / sum_kx;
 
 						for (; node_inc < accumulate(nx.begin(), nx.begin() + k + 1, 0);) {
 							//if(y_ind==0)
-							hy = (nodes[i + node_inc + x.size()*(ny[j]-1)].y - nodes[i + node_inc + x.size()*y_ind - x.size() * (y_ind + 1)].y) / sum_ky;
-							nodes[i + node_inc + x.size() * y_ind].x = hx + nodes[i - 1 + node_inc + x.size() * y_ind].x;
-							nodes[i + node_inc + x.size() * y_ind].y = hy + nodes[i - x.size() + node_inc + x.size() * y_ind].y;
-							nodes[i + node_inc + x.size() * y_ind].num = nodes[i + node_inc + x.size() * y_ind - 1].num + 1;
+							hy = (nodes[i + node_inc + x.size()*(ny[j]-1)].y - nodes[i + node_inc - x.size()].y) / sum_ky;
+							nodes[i + node_inc + node_offset].x = hx + nodes[i - 1 + node_inc + node_offset].x;
+							nodes[i + node_inc + node_offset].y = hy + nodes[i - x.size() + node_inc + node_offset].y;
+							nodes[i + node_inc + node_offset].num = nodes[i + node_inc + node_offset - 1].num + 1;
 							hx *= kx[k];
 							node_inc++;
 						}
