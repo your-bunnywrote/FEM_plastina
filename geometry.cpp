@@ -111,7 +111,7 @@ void comp_domain::create_holegeom_info() {
 	cin >> is_symmetric;
 
 	if (is_symmetric) {
-		Point hole_center(x2, (y2 - y1) / 2, 0);
+		hole_center = Point(x2, (y2 - y1) / 2, 0);
 		//plategeomfile.open(input_folder + "/curves_and_domains.txt");
 		// величины постоянные, так как для такой геометрии существует только один вариант обработки используемым методом
 		int horizontal_keypoints_count = 3,		// количество точек вдоль оси x (задают верт. линии)
@@ -238,11 +238,25 @@ void comp_domain::nonsymmetric_hole_geom() {
 
 
 bool comp_domain::is_contain(const Point& node) {
-	for (size_t i = 0; i < rect_domains.size(); i++) {
-		if ((node.x >= rect_domains[i].first.x) && (node.x <= rect_domains[i].second.x + 1) && (node.y >= rect_domains[i].first.y) && (node.y <= rect_domains[i].second.y))
-			return true;
+	if (!is_hole) {
+		for (size_t i = 0; i < rect_domains.size(); i++) {
+			if ((node.x >= rect_domains[i].first.x) && (node.x <= rect_domains[i].second.x + 1) && (node.y >= rect_domains[i].first.y) && (node.y <= rect_domains[i].second.y))
+				return true;
+		}
+		return false;
 	}
-	return false;
+	else {
+		// неравенство по уравнению окружности: (x - center.x)^2 + (y-center.y)^2 = R^2
+		// если левая часть меньше правой, узел попадает в окружность, следовательно, не попадает в подобласть и подлежит удалению
+		// если левая часть больше либо равна правой, узел не попадает в круг и остается в списке
+
+		// округляем левую часть, так как сравниваем два числа типа double
+		double rounded = round( ((node.x - hole_center.x) * (node.x - hole_center.x) + (node.y - hole_center.y) * (node.y - hole_center.y)) * number_of_dicimal)/number_of_dicimal;
+		if (rounded < hole_radius * hole_radius)
+			return false;
+		return true;
+	}
+
 }
 
 

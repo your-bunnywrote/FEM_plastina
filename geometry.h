@@ -76,6 +76,7 @@ public:
 	double length;
 	double width;
 	double hole_radius;
+	Point hole_center;
 	vector<pair<Point, Point >> rect_domains;	// содержит пару поинтов - противоположные углы прямоугольника (x1,y1) и (x2,y2), фактически описывающие прямоугольник
 	void read_noholegeom_info();
 	void create_holegeom_info();
