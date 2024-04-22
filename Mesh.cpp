@@ -73,6 +73,17 @@ Element::Element() {
 }
 
 
+Mesh::Mesh() {
+};
+
+
+Mesh::Mesh(bool is_hole) {
+	subdomain = comp_domain(is_hole);
+
+
+
+}
+
 //========================================================================
 
 void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
