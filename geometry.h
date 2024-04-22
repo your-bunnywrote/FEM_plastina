@@ -52,7 +52,7 @@ public:
 	double radius;
 
 	Curve();
-	// по умолчанию (без указания типа) кривая - линия, у которой всегда есть начало и конец, поэтому конструктор по умолчанию на входе получает две точки - начало и конец, а также номер
+	// по умолчанию (без указания типа) кривая - линия, у которой всегда есть начало и конец, поэтому конструктор на входе получает две точки - начало и конец, а также номер
 	Curve(Point begin_, Point end_, int num_);
 	// если кривая - дуга, то в конструктор подается тип (дуга), центр, радиус, начало и конец, а также номер
 	Curve(curve_type type, Point center_, double radius_, Point begin_, Point end_, int num_);
@@ -70,7 +70,7 @@ class comp_domain {
 public:
 	int Nx, Ny;			// количество линий, ограничивающих подобласти
 	bool is_hole;
-	vector<Point> coords;	// вектор координат линий, ограничивающих подобласти
+	vector<Point> coords;	// вектор координат линий, ограничивающих подобласти (для прямоугольной геометрии)
 	vector<vector<Curve>> vertical_curves;
 	vector<vector<Curve>> horizontal_curves;
 	double length;
@@ -83,6 +83,7 @@ public:
 	void nonsymmetric_hole_geom();
 	bool is_contain(const Point& node);	// проверяет, попадает ли узел в истинную подобласть
 	comp_domain();
+	comp_domain(bool is_hole);
 };
 
 

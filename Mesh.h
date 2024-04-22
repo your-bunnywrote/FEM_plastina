@@ -39,6 +39,9 @@ public:
 
 class Mesh {
 public:
+	Mesh();
+	Mesh(bool is_hole);
+
 	comp_domain subdomain;
 	vector<Point> nodes;
 	vector<Element> elements;
@@ -48,8 +51,8 @@ public:
 				   ky;
 	vector<int> num_nodes_in_new_mesh;	// содержит новую нумерацию узлов, индекс этого узла (с нуля) - номер узла до удаления
 
-	// вычисление координат узлов сетки с круговым отверстием
 
+	// вычисление координат узлов сетки с круговым отверстием
 	// так как для вычисления координат нам нужны координаты интервалов горизонтальных и вертикальных линий, эта функция должна быть членом класса comp_domain или Mesh
 	void calculate_coords(vector<double>& x, vector<double>& y);
 

@@ -73,6 +73,17 @@ Element::Element() {
 }
 
 
+Mesh::Mesh() {
+};
+
+
+Mesh::Mesh(bool is_hole) {
+	subdomain = comp_domain(is_hole);
+
+
+
+}
+
 //========================================================================
 
 void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
@@ -395,7 +406,7 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	}
 	// учет пустот в геометрии: удаление ненужных узлов и элементов, их перенумерация
 	// удаление узлов и перенумерация оставшихся
-	Mesh NewMesh;		// входит в конструктор comp_domain и снова запрашивает наличие отверстия - ИСПРАВИТЬ!
+	Mesh NewMesh;
 	bool is_remove_node = false;
 	uint32_t removed_nodes = 0;
 	mesh.num_nodes_in_new_mesh.resize(mesh.nodes.size());

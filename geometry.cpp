@@ -23,8 +23,8 @@ Curve::Curve(curve_type type_, Point center_, double radius_, Point begin_, Poin
 }
 
 
-
-comp_domain::comp_domain() {
+comp_domain::comp_domain(){}
+comp_domain::comp_domain(bool is_hole) {
 
 	// так как процесс обработки геометрии нелинейный и сильно зависит от отверстия, будем запрашивать наличие отверстия через консоль
 	// если отверстия нет, то структура входных данных будет стандартная, заранее определенная в файле "no_hole_geom.txt" ("subdomains.txt")
@@ -37,9 +37,7 @@ comp_domain::comp_domain() {
 	// через имеющиеся параметры вычисляются координаты остальных ключевых точек (середины дуг, их проекции на горизонтальные и вертикальные линии) и вносятся в структуру
 	// 
 
-	is_hole = false;
-	cout << "Define the presence of hole (0/1):" << endl;
-	cin >> is_hole;
+
 	if (is_hole)
 		create_holegeom_info();
 	else
@@ -133,7 +131,7 @@ void comp_domain::create_holegeom_info() {
 			int l = i / vertical_keypoints_count;
 			double phi = (1 + (l + 1) / 3) * M_PI_4;	// pi/4 для точек первых двух "вертикальных линий", когда точка находится на середине четверти дуги окружности. pi/2 для последней линии, когда точка лежит на оси симметрии
 			kp_y[4 * l + 0] = 0.0;
-			kp_y[4 * l + 1] = hole_center.y - hole_radius * sin(phi);	// придумать зависимость угла от l такую, чтобы в подсчете последней четверки чисел угол был pi/2
+			kp_y[4 * l + 1] = hole_center.y - hole_radius * sin(phi);
 			kp_y[4 * l + 1] = hole_center.y - hole_radius * sin(phi);
 			kp_y[4 * l + 2] = hole_center.y + hole_radius * sin(phi);
 			kp_y[4 * l + 3] = y2;
@@ -226,9 +224,6 @@ void comp_domain::create_holegeom_info() {
 		nonsymmetric_hole_geom();
 	}
 
-	// придумать, как можно в этот массив внести координаты вертикальных и горизонтальных границ подобластей, но прежде нужно обработать информацию об окружности
-	this->coords;
-
 }
 
 void comp_domain::nonsymmetric_hole_geom() {
@@ -251,6 +246,7 @@ bool comp_domain::is_contain(const Point& node) {
 		// если левая часть больше либо равна правой, узел не попадает в круг и остается в списке
 
 		// округляем левую часть, так как сравниваем два числа типа double
+		int number_of_dicimal = 1e4;
 		double rounded = round( ((node.x - hole_center.x) * (node.x - hole_center.x) + (node.y - hole_center.y) * (node.y - hole_center.y)) * number_of_dicimal)/number_of_dicimal;
 		if (rounded < hole_radius * hole_radius)
 			return false;

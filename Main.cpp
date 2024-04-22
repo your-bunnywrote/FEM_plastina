@@ -242,7 +242,12 @@ void solve_pardiso_symm(MKL_INT64 n, MKL_INT64* ia, MKL_INT64* ja, double* a, do
 
 
 int main() {
-	Mesh mesh;
+	bool is_hole = false;
+	cout << "Define the presence of hole (0/1):" << endl;
+	cin >> is_hole;
+
+	Mesh mesh(is_hole);
+
 	string	filename_nodes = output_folder + "\\nodes.txt",
 			filename_elements = output_folder + "\\elements.txt";
 	CreateMesh(mesh, filename_nodes, filename_elements);
