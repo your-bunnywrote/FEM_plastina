@@ -476,7 +476,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 
 	comp_domain domain = mesh.subdomain;
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+		//if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
 			fixed_nodes.push_back(mesh.nodes[i].num);					// coords[0].x - координата левой кромки пластины
 																		// coords[1].x - координата отверстия пластины
 																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
@@ -485,7 +486,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	// =========== Создание списка нагруженных узлов ==============
 
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
+		//if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
+		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
 			loaded_nodes.push_back(mesh.nodes[i].num);
 	}
 
@@ -560,7 +562,7 @@ void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
 	cout << "\nAssembling Global Load Vector...\n";
 	int nodes_count = mesh.nodes.size();
 	Load P;
-	P.GetLineLength(mesh);
+	//P.GetLineLength(mesh);
 	block1x2 block;
 	// размер вектора нагрузок - 1хN, где N = количество_степеней_свободы_узла(2) * количество_узлов
 	// в блочном формате - 1xK, где K = количество_узлов
