@@ -2,6 +2,54 @@
 
 string input_folder = "test";
 
+Point::Point() {
+	x = 0.;
+	y = 0.;
+	num = 0;
+}
+
+Point::Point(double x, double y, int num) {
+	this->x = x;
+	this->y = y;
+	this->num = num;
+}
+
+Point Point::operator*(double t) {
+	double x_res, y_res;
+	x_res = x * t;
+	y_res = y * t;
+	return Point(x_res, y_res);
+}
+
+Point Point::operator+(Point p) {
+	double x_res, y_res;
+	x_res = x + p.x;
+	y_res = y + p.y;
+	return Point(x_res, y_res);
+}
+
+Point Point::operator-(Point p) {
+	double x_res, y_res;
+	x_res = x - p.x;
+	y_res = y - p.y;
+	return Point(x_res, y_res);
+}
+
+Point Point::operator+(double val) {
+	double res_x, res_y;
+	res_x = x + val;
+	res_y = y + val;
+	return Point(res_x, res_y);
+}
+
+Point Point::operator/(double val) {
+	double res_x, res_y;
+	res_x = x / val;
+	res_y = y / val;
+	return Point(res_x, res_y);
+}
+
+
 Curve::Curve() {};
 
 Curve::Curve(Point begin_, Point end_, int num_) {
@@ -36,7 +84,7 @@ comp_domain::comp_domain(bool is_hole) {
 	// (не входит в структуру) центр окружности - вычисляется через размеры прямоугольника
 	// через имеющиеся параметры вычисляются координаты остальных ключевых точек (середины дуг, их проекции на горизонтальные и вертикальные линии) и вносятся в структуру
 	// 
-
+	this->is_hole = is_hole;
 
 	if (is_hole)
 		create_holegeom_info();

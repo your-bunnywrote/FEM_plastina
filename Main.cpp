@@ -255,7 +255,7 @@ int main() {
 
 
 	Rectangle rect;
-	Element element = mesh.elements[0];
+	//Element element = mesh.elements[0];
 
 	rect.Assemble_GlobalStiffnessMatrix(mesh);
 	rect.Assemble_GlobalLoadVector(mesh);
