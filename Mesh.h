@@ -18,10 +18,10 @@ public:
 
 };
 
-
+enum etype { RECTANGLE, QUADR };
 class Element {
 public:
-	enum etype { RECTANGLE, QUADRILATERAL };
+	etype type;
 	vector<Point> loc_nodes;
 	size_t num;
 	Material mat;
@@ -33,6 +33,17 @@ public:
 	//											D  = ------	|mu 1	 0	  |
 	//												 1-mu^2 |0  0 (1-mu)/2|
 	Element();
+protected:
+	void twoD_to_oneD(size_t i, size_t& mu, size_t& nu);
+	virtual double bfunc1D(size_t func_num, double x0, double x1, double x);
+	virtual double dbfunc1D(size_t func_num, double x0, double x1, double x);
+private:
+	double gauss_points_local[3];
+	double gauss_weights[3];
+	Point integrate_points[9];
+	
+
+
 };
 
 

@@ -18,19 +18,21 @@ public:
 	Rectangle();
 	// Одномерные линейные функции формы
 	// Несмотря на аргументы x0, x1, x, функции также применяются для вычислений функций по Y, так как имеют одинаковый вид
-	double bfunc1D_1(double x0, double x1, double x);
-	double bfunc1D_2(double x0, double x1, double x);
+	double bfunc1D(size_t fucn_num, double x0, double x1, double x) override;
+
 	// Производные функций форм
-	double dbfunc1D_1(double x0, double x1, double x);
-	double dbfunc1D_2(double x0, double x1, double x);
+	double dbfunc1D(size_t func_num, double x0, double x1, double x) override;
+
 	double param_func_x(double t, Point& from, Point& to);		// параметрическое представление функции координат
 	double param_func_y(double t, Point& from, Point& to);		
-	// Двухмерные функции формы
+	// Двумерные билинейные функции формы
 	// в качестве независимой переменной x сюда будут посылаться точки Гаусса, по которым будем интегрировать
 	// то есть эта функция должна быть в цикле по точкам Гаусса
 	double phi(size_t func_num, Point& from, Point& to, double x, double y);
-	double parametric_phi(size_t num, double t);
-	double dphi(size_t var, size_t num1, size_t num2, Point& from, Point& to, double x, double y);
+
+	// производные двумерных функции форм
+	//double dphi(size_t var, size_t num1, size_t num2, Point& from, Point& to, double x, double y);
+	double dphi(size_t var, size_t num1, size_t num2, Point from, Point to, double x, double y);
 
 
 	static double gauss_points_local[3];
@@ -73,8 +75,7 @@ public:
 class Load {
 public:
 	Load();
-	void GetLineLength(Mesh mesh);
-	double LineLength;
+
 	double Px, Py;	// компоненты поверхностных сил
 };
 
