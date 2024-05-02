@@ -34,10 +34,12 @@ public:
 	//double dphi(size_t var, size_t num1, size_t num2, Point& from, Point& to, double x, double y);
 	double dphi(size_t var, size_t num1, size_t num2, Point from, Point to, double x, double y);
 
-
-	static double gauss_points_local[3];
-	static Point integrate_points[9];
-	static double gauss_weights[3];
+	double gauss_points_local[3];
+	double gauss_weights[3];
+	Point integrate_points[9];
+	//static double gauss_points_local[3];
+	//static Point integrate_points[9];
+	//static double gauss_weights[3];
 	// интегрирование методом Гаусса по элементу
 	double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var);
 	// интегрирование методом Гаусса по ребру

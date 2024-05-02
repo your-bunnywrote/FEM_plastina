@@ -106,6 +106,23 @@ Rectangle::Rectangle() {
 	}
 	LocalLoadVector_block.resize(4);
 	LocalLoadVector.resize(8);
+
+	gauss_points_local[0] = -0.77459666924148337703585307995648;
+	gauss_points_local[1] = 0.;
+	gauss_points_local[2] = 0.77459666924148337703585307995648;
+
+	gauss_weights[0] = 5. / 9.;
+	gauss_weights[1] = 8. / 9.;
+	gauss_weights[2] = 5. / 9.;
+
+	int p_id = 0;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			integrate_points[p_id] = Point(gauss_points_local[j], gauss_points_local[i]);
+			p_id++;
+		}
+	}
+
 }
 
 ostream& operator<<(ostream& os, const block2x2& block) {
@@ -121,23 +138,10 @@ ostream& operator<<(ostream& os, const block1x2& block) {
 };
 
 
+
+
 void Rectangle::init()
 {
-	gauss_points_local[0] = -0.77459666924148337703585307995648;
-	gauss_points_local[1] = 0.;
-	gauss_points_local[2] = 0.77459666924148337703585307995648;
-
-	gauss_weights[0] = 5. / 9.;
-	gauss_weights[1] = 8. / 9;
-	gauss_weights[2] = 5. / 9.;
-
-	int p_id = 0;
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			integrate_points[p_id] = Point(gauss_points_local[j], gauss_points_local[i]);
-			p_id++;
-		}
-	}
 
 }
 
@@ -345,7 +349,7 @@ double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, dou
 //}
 
 double Rectangle::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) {
-	this->init();
+	//this->init();
 	int p_id = 0;
 	double res = 0.0;
 	double x_centre = (to.x + from.x) / 2., 
@@ -457,6 +461,13 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	// собираем
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
 		Element current_element = mesh.elements[i_elem];
+		//if ((current_element.loc_nodes[0].y == current_element.loc_nodes[1].y)
+		//	&& (current_element.loc_nodes[0].x == current_element.loc_nodes[3].x)
+		//	&& (current_element.loc_nodes[1].x == current_element.loc_nodes[2].x)
+		//	&& (current_element.loc_nodes[2].y == current_element.loc_nodes[3].y))
+		//	current_element.type = RECTANGLE;
+		//else
+		//	current_element.type = QUADR;
 		Calculate_LocalStiffnessMatrix(current_element);
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {

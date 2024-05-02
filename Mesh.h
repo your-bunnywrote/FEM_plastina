@@ -35,12 +35,14 @@ public:
 	Element();
 protected:
 	void twoD_to_oneD(size_t i, size_t& mu, size_t& nu);
-	virtual double bfunc1D(size_t func_num, double x0, double x1, double x);
-	virtual double dbfunc1D(size_t func_num, double x0, double x1, double x);
-private:
-	double gauss_points_local[3];
-	double gauss_weights[3];
-	Point integrate_points[9];
+	virtual double bfunc1D(size_t func_num, double x0, double x1, double x) {
+		return 1;
+	};
+	virtual double dbfunc1D(size_t func_num, double x0, double x1, double x) {
+		return 1;
+	};
+
+
 	
 
 
