@@ -196,16 +196,16 @@ double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, dou
 	twoD_to_oneD(j, mu2, nu2);
 	switch (var) {
 	// Kx[i][j] = dphi[i]/dx * dphi[j]/dx
-	case 0: return dbfunc1D(mu1, from.x, to.x, x) * dbfunc1D(mu2, from.x, to.x, x) * bfunc1D(mu1, from.y, to.y, y) * bfunc1D(mu2, from.y, to.y, y);
+	case 0: return dbfunc1D(mu1, from.x, to.x, x) * dbfunc1D(mu2, from.x, to.x, x) * bfunc1D(nu1, from.y, to.y, y) * bfunc1D(nu2, from.y, to.y, y);
 
 	// Ky[i][j] = dphi[i]/dy * dphi[j]/dy
-	case 1: return bfunc1D(mu1, from.x, to.x, x) * bfunc1D(mu2, from.x, to.x, x) * dbfunc1D(mu1, from.y, to.y, y) * dbfunc1D(mu2, from.y, to.y, y);
+	case 1: return bfunc1D(mu1, from.x, to.x, x) * bfunc1D(mu2, from.x, to.x, x) * dbfunc1D(nu1, from.y, to.y, y) * dbfunc1D(nu2, from.y, to.y, y);
 
 	// Kxy[i][j] = dphi[i]dx * dphi[j]/dy
-	case 2: return dbfunc1D(mu1, from.x, to.x, x) * bfunc1D(mu2, from.x, to.x, x) * dbfunc1D(mu1, from.y, to.y, y) * bfunc1D(mu2, from.y, to.y, y);
+	case 2: return dbfunc1D(mu1, from.x, to.x, x) * bfunc1D(mu2, from.x, to.x, x) * bfunc1D(nu1, from.y, to.y, y) * dbfunc1D(nu2, from.y, to.y, y);
 
 	// Kyx[i][j] = dphi[i]dy * dphi[j]/dy
-	case 3: return bfunc1D(mu1, from.x, to.x, x) * dbfunc1D(mu2, from.x, to.x, x) * bfunc1D(mu1, from.y, to.y, y) * dbfunc1D(mu2, from.y, to.y, y);
+	case 3: return bfunc1D(mu1, from.x, to.x, x) * dbfunc1D(mu2, from.x, to.x, x) * dbfunc1D(nu1, from.y, to.y, y) * bfunc1D(nu2, from.y, to.y, y);
 	}
 
 }
@@ -509,8 +509,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 
 	comp_domain domain = mesh.subdomain;
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		//if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
-		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
+		if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+		//if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
 			fixed_nodes.push_back(mesh.nodes[i].num);					// coords[0].x - координата левой кромки пластины
 																		// coords[1].x - координата отверстия пластины
 																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
@@ -519,8 +519,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	// =========== Создание списка нагруженных узлов ==============
 
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		//if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
-		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
+		if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
+		//if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
 			loaded_nodes.push_back(mesh.nodes[i].num);
 	}
 
@@ -651,6 +651,7 @@ void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
 
 
 void Rectangle::GeneratePortrait(Portrait& portrait,vector<vector<double>> GSM, int &ja_sz) {
+	cout << "Generating Portrait...\n";
 	int ggl_size = 0;
 	int temp = 0;
 	portrait.ig[0] = 0;
@@ -675,6 +676,7 @@ void Rectangle::GeneratePortrait(Portrait& portrait,vector<vector<double>> GSM, 
 
 	ja_sz = portrait.ig[GSM.size()];
 
+	cout << "Portrait generated.\n";
 	//ofstream outfile;
 	//outfile.open("CSRmatrix\\jg.txt");
 	//for (int i = 0; i < ggl_size; i++) {

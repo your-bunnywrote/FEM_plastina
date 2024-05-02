@@ -264,7 +264,7 @@ int main() {
 
 
 	out.open(output_folder + "\\out_stiffness_matrix.txt");
-	//cout << "Printing results...\n";
+	cout << "Printing results...\n";
 
 	for (int i = 0; i < rect.GlobalStiffnessMatrix.size(); i++) {
 		for (int j = 0; j < rect.GlobalStiffnessMatrix.size(); j++) {
@@ -280,6 +280,7 @@ int main() {
 	for (int i = 0; i < rect.GlobalLoadVector.size(); i++) {
 		out << rect.GlobalLoadVector[i] << "\n";
 	}
+	cout << "Results has been printed\n";
 	out.close();
 
 
