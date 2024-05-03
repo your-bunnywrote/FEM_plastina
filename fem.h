@@ -14,6 +14,7 @@ class block1x2;
 class Load;
 class Rectangle : public Element {
 public:
+	etype type = RECTANGLE;
 	static void init();
 	Rectangle();
 	// Одномерные линейные функции формы
@@ -23,8 +24,6 @@ public:
 	// Производные функций форм
 	double dbfunc1D(size_t func_num, double x0, double x1, double x) override;
 
-	double param_func_x(double t, Point& from, Point& to);		// параметрическое представление функции координат
-	double param_func_y(double t, Point& from, Point& to);		
 	// Двумерные билинейные функции формы
 	// в качестве независимой переменной x сюда будут посылаться точки Гаусса, по которым будем интегрировать
 	// то есть эта функция должна быть в цикле по точкам Гаусса
@@ -73,6 +72,26 @@ public:
 	void GeneratePortrait(Portrait & Matrix, vector<vector<double>> GSM, int &ja_sz);
 };
 
+class Quadrilateral : public Element {
+public:
+	etype type = QUADR;
+	// одномерные базисные функции в шаблонных координатах
+	double bfunc1D(size_t fucn_num, double x0, double x1, double x) override;
+	// производные одномерных бф в шаблонных координатах
+	double dbfunc1D(size_t func_num, double x0, double x1, double x) override;
+	// Якобиан
+	double det_J(Point& p);
+
+	
+
+private:
+	double alpha0, alpha1, alpha2;
+	double beta1, beta2, beta3, beta4, beta5, beta6;
+
+
+};
+
+
 // класс нагрузки
 class Load {
 public:
@@ -109,6 +128,25 @@ public:
 	block1x2 operator = (double val);
 };
 
+class FEM {
+public:
+	Rectangle rect;
+	Quadrilateral quad;
+
+	void AssembleGlobalStiffnessMatrix(Mesh& mesh);
+	vector<vector<double>> GlobalStiffnessMatrix;
+
+	void AssembleGlobalLoadVector(Mesh& mesh);
+	vector<vector<double>> GlobalLoadVector;
+
+	vector<int> loaded_nodes;
+	vector<int> fixed_nodes;
+
+	void GeneratePortrait(Portrait& portrait, vector<vector<double>> GSM, int ig_n_1);
+
+private:
+
+};
 
 #endif // !FEM_H
 

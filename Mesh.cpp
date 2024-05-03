@@ -23,10 +23,10 @@ vector<string> split(string& s, char delimeter) {
 
 
 
-Element::Element() {
+
+Cell::Cell() {
 	loc_nodes.resize(4);
 }
-
 
 Mesh::Mesh() {
 };
@@ -339,7 +339,6 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 
 
 	// заполняем вектор элементов
-	Element el;
 	size_t elemnum = 0;
 	mesh.elements.resize((x.size() - 1) * (y.size() - 1));
 	for (size_t j = 0; j < y.size() - 1; j++) {
@@ -349,11 +348,6 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 			mesh.elements[i + j * (x.size() - 1)].loc_nodes[2] = mesh.nodes[i + 1 + (j + 1) * x.size()];
 			mesh.elements[i + j * (x.size() - 1)].loc_nodes[3] = mesh.nodes[i + (j + 1) * x.size()];
 
-			// для прямоугольной сетки
-			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[0] = Point(x[i], y[j], mesh.nodes[i + j * x.size()].num);
-			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[1] = Point(x[i + 1], y[j], mesh.nodes[i + 1 + j * x.size()].num);
-			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[2] = Point(x[i + 1], y[j + 1], mesh.nodes[i + 1 + (j + 1) * x.size()].num);
-			//mesh.elements[i + j * (x.size() - 1)].loc_nodes[3] = Point(x[i], y[j + 1], mesh.nodes[i + (j + 1) * x.size()].num);
 			mesh.elements[i + j * (x.size() - 1)].mat.num = 1;
 			mesh.elements[i + j * (x.size() - 1)].num = elemnum + 1;
 			elemnum++;

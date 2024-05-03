@@ -19,6 +19,7 @@ public:
 };
 
 enum etype { RECTANGLE, QUADR };
+// если экземпл€ры класса нигде не создаютс€, то он абстрактный
 class Element {
 public:
 	etype type;
@@ -33,8 +34,11 @@ public:
 	//											D  = ------	|mu 1	 0	  |
 	//												 1-mu^2 |0  0 (1-mu)/2|
 	Element();
+	void init();
 protected:
 	void twoD_to_oneD(size_t i, size_t& mu, size_t& nu);
+
+	// базисные функции и их производные дл€ пр€моугольного элемента в глобальных координатах
 	virtual double bfunc1D(size_t func_num, double x0, double x1, double x) {
 		return 1;
 	};
@@ -42,13 +46,34 @@ protected:
 		return 1;
 	};
 
+	// базисные функции и их производные дл€ четыреъугольного элемента в шаблонных координатах
+	virtual double bfunc1D(size_t func_num, double ksi) {
+		return 1;
+	}
+	virtual double dbfunc2D(size_t func_num, double ksi) {
+		return 1;
+	}
 
+	virtual void CalculateLocalStiffnessMatrix() {};
+	virtual void CalculateLocalLoadVector() {};
+
+private:
+	double gauss_points_local[3];
+	double gauss_weights[3];
+	Point integrate_points[9];
 	
 
 
 };
 
-
+//  ласс €чейки, эквивалентный элементу, но содержащий в себе только информацию о геометрии
+class Cell {
+public:
+	vector<Point> loc_nodes;
+	size_t num;
+	Material mat;
+	Cell();
+};
 
 class Mesh {
 public:
@@ -57,7 +82,7 @@ public:
 
 	comp_domain subdomain;
 	vector<Point> nodes;
-	vector<Element> elements;
+	vector<Cell> elements;
 	vector<int> nx,		// количество узлов на подынтервалах
 				ny;
 	vector<double> kx,	// коэффициенты разр€дки

@@ -87,6 +87,17 @@ block1x2 block1x2::operator = (double val) {
 	return block1x2(val1, val2);
 }
 
+ostream& operator<<(ostream& os, const block2x2& block) {
+	os << block.val11 << "\t" << block.val12 << "\n"
+		<< block.val21 << "\t" << block.val22;
+	return os;
+};
+
+ostream& operator<<(ostream& os, const block1x2& block) {
+	os << block.val1 << "\n"
+		<< block.val2 << "\n\n";
+	return os;
+};
 
 void Element::twoD_to_oneD(size_t i, size_t& mu, size_t& nu) {
 	mu = ((i + 1) / 2) % 2;
@@ -125,19 +136,28 @@ Rectangle::Rectangle() {
 
 }
 
-ostream& operator<<(ostream& os, const block2x2& block) {
-	os << block.val11 << "\t" << block.val12 << "\n"
-		<< block.val21 << "\t" << block.val22;
-	return os;
-};
 
-ostream& operator<<(ostream& os, const block1x2& block) {
-	os << block.val1 << "\n"
-		<< block.val2 << "\n\n";
-	return os;
-};
+Element::Element() {
+	loc_nodes.resize(4);
+}
 
+void Element::init() {
+	gauss_points_local[0] = -0.77459666924148337703585307995648;
+	gauss_points_local[1] = 0.;
+	gauss_points_local[2] = 0.77459666924148337703585307995648;
 
+	gauss_weights[0] = 5. / 9.;
+	gauss_weights[1] = 8. / 9.;
+	gauss_weights[2] = 5. / 9.;
+
+	int p_id = 0;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			integrate_points[p_id] = Point(gauss_points_local[j], gauss_points_local[i]);
+			p_id++;
+		}
+	}
+}
 
 
 void Rectangle::init()
@@ -421,7 +441,7 @@ void Rectangle::Calculate_LocalStiffnessMatrix(Element& element) {
 		}
 	}
 
-
+	// переформатирование блочной локальной матрицы в поэлементный формат
 	for (int i = 0; i < 8; i++) {
 		for (int j = 0; j < 8; j++) {
 			// если мы сейчас находимся в нечетной строке матрицы, то заполняем строку значениями первых строк блоков
@@ -459,22 +479,22 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	}
 
 	// собираем
-	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-		Element current_element = mesh.elements[i_elem];
-		//if ((current_element.loc_nodes[0].y == current_element.loc_nodes[1].y)
-		//	&& (current_element.loc_nodes[0].x == current_element.loc_nodes[3].x)
-		//	&& (current_element.loc_nodes[1].x == current_element.loc_nodes[2].x)
-		//	&& (current_element.loc_nodes[2].y == current_element.loc_nodes[3].y))
-		//	current_element.type = RECTANGLE;
-		//else
-		//	current_element.type = QUADR;
-		Calculate_LocalStiffnessMatrix(current_element);
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				GlobalStiffnessMatrix_block[current_element.loc_nodes[i].num - 1][current_element.loc_nodes[j].num - 1] += LocalStiffnessMatrix_block[i][j];
-			}
-		}
-	}
+	//for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
+	//	Element current_element = mesh.elements[i_elem];
+	//	//if ((current_element.loc_nodes[0].y == current_element.loc_nodes[1].y)
+	//	//	&& (current_element.loc_nodes[0].x == current_element.loc_nodes[3].x)
+	//	//	&& (current_element.loc_nodes[1].x == current_element.loc_nodes[2].x)
+	//	//	&& (current_element.loc_nodes[2].y == current_element.loc_nodes[3].y))
+	//	//	current_element.type = RECTANGLE;
+	//	//else
+	//	//	current_element.type = QUADR;
+	//	Calculate_LocalStiffnessMatrix(current_element);
+	//	for (int i = 0; i < 4; i++) {
+	//		for (int j = 0; j < 4; j++) {
+	//			GlobalStiffnessMatrix_block[current_element.loc_nodes[i].num - 1][current_element.loc_nodes[j].num - 1] += LocalStiffnessMatrix_block[i][j];
+	//		}
+	//	}
+	//}
 
 
 	// выделяем память под матрицу
@@ -509,8 +529,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 
 	comp_domain domain = mesh.subdomain;
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
-		//if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
+		//if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
 			fixed_nodes.push_back(mesh.nodes[i].num);					// coords[0].x - координата левой кромки пластины
 																		// coords[1].x - координата отверстия пластины
 																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
@@ -519,8 +539,8 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	// =========== Создание списка нагруженных узлов ==============
 
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
-		//if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
+		//if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
+		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
 			loaded_nodes.push_back(mesh.nodes[i].num);
 	}
 
