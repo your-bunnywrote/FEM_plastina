@@ -9,12 +9,71 @@
 
 class block2x2;
 class block1x2;
-
-
 class Load;
+
+
+// если экземпл€ры класса нигде не создаютс€, то он абстрактный
+class Element {
+public:
+	etype type;
+	vector<Point> loc_nodes;
+	size_t num;
+	Material mat;
+	// –≈ƒј “»–ќ¬ј“№: можно заменить на обычный двумерный массив
+	vector<vector<double>> D = { {mat.c, mat.c * mat.mu, 0},
+							   {mat.c * mat.mu, mat.c * 1, 0},
+							   {0, 0, mat.c * (1 - mat.mu) / 2} };	// матрица упругости, дл€ изотропного материала имеюща€ вид		
+	//												    E   |1 mu	 0	  |
+	//											D  = ------	|mu 1	 0	  |
+	//												 1-mu^2 |0  0 (1-mu)/2|
+	Element();
+	void init();
+	vector<vector<double>> LocalStiffnessMatrix;
+	vector<vector<block2x2>> LocalStiffnessMatrix_block;
+	virtual void CalculateLocalStiffnessMatrix() {};
+	vector<double> LocalLoadVector;
+	vector<block1x2> LocalLoadVector_block;
+	virtual void CalculateLocalLoadVector(Load& P) {};
+
+	virtual double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) {
+		return 1;
+	};
+	virtual double Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
+		return 1;
+	};
+
+protected:
+	void twoD_to_oneD(size_t i, size_t& mu, size_t& nu);
+
+	// базисные функции и их производные дл€ пр€моугольного элемента в глобальных координатах
+	virtual double bfunc1D(size_t func_num, double x0, double x1, double x) {
+		return 1;
+	};
+	virtual double dbfunc1D(size_t func_num, double x0, double x1, double x) {
+		return 1;
+	};
+
+	// базисные функции и их производные дл€ четырехугольного элемента в шаблонных координатах
+	virtual double bfunc1D(size_t func_num, double ksi) {
+		return 1;
+	}
+	virtual double dbfunc1D(size_t func_num, double ksi) {
+		return 1;
+	}
+	double gauss_points_local[3];
+	double gauss_weights[3];
+	Point integrate_points[9];
+
+
+
+};
+
+
+
+
 class Rectangle : public Element {
 public:
-	etype type = RECTANGLE;
+	etype type = RECT;
 	static void init();
 	Rectangle();
 	// ќдномерные линейные функции формы
@@ -33,54 +92,58 @@ public:
 	//double dphi(size_t var, size_t num1, size_t num2, Point& from, Point& to, double x, double y);
 	double dphi(size_t var, size_t num1, size_t num2, Point from, Point to, double x, double y);
 
-	double gauss_points_local[3];
-	double gauss_weights[3];
-	Point integrate_points[9];
+
 	//static double gauss_points_local[3];
 	//static Point integrate_points[9];
 	//static double gauss_weights[3];
 	// интегрирование методом √аусса по элементу
-	double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var);
+	double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) override;
 	// интегрирование методом √аусса по ребру
-	double Edge_IntegrateGauss3(Point& from, Point& to, size_t num);
+	double Edge_IntegrateGauss3(Point& from, Point& to, size_t num) override;
 	// вычисление локальной матрицы жесткости дл€ элемента
-	void Calculate_LocalStiffnessMatrix(Element& element);
-	vector<int> fixed_nodes;
-	vector<int> loaded_nodes;
+	void CalculateLocalStiffnessMatrix() override;
+	// vector<int> fixed_nodes;
+	// vector<int> loaded_nodes;
 	// сюда будем вносить блоки, так как матрица жесткости имеет блочную структуру
-	vector<vector<block2x2>> LocalStiffnessMatrix_block;
-	vector<vector<block2x2>> GlobalStiffnessMatrix_block;
+	//vector<vector<block2x2>> LocalStiffnessMatrix_block;
+	//vector<vector<block2x2>> GlobalStiffnessMatrix_block;
 	// поэлементные форматы матрицы жесткости
-	vector<vector<double>> LocalStiffnessMatrix;
-	vector<vector<double>> GlobalStiffnessMatrix;
+	//vector<vector<double>> LocalStiffnessMatrix;
+	//vector<vector<double>> GlobalStiffnessMatrix;
 	// сборка глобальной матрицы жесткости
-	void Assemble_GlobalStiffnessMatrix(Mesh& mesh);
+	// void Assemble_GlobalStiffnessMatrix(Mesh& mesh);
 	
 	// вычисление локального вектора нагрузок
-	void Calculate_LocalLoadVector(Element& element, Load P);
-	vector<block1x2> LocalLoadVector_block;
-	vector<block1x2> GlobalLoadVector_block;
+	void CalculateLocalLoadVector( Load& P) override;
+	// vector<block1x2> LocalLoadVector_block;
+	// vector<block1x2> GlobalLoadVector_block;
 
 	// поэлементные форматы векторов нагрузок
-	vector<double> LocalLoadVector;
-	vector<double> GlobalLoadVector;
+	//vector<double> LocalLoadVector;
+	//vector<double> GlobalLoadVector;
 
-	void Assemble_GlobalLoadVector(Mesh& mesh);
+	//void Assemble_GlobalLoadVector(Mesh& mesh);
 
 	// конвертирование матрицы в разреженный формат дл€ использовани€ в PARDISO
 	
-	void GeneratePortrait(Portrait & Matrix, vector<vector<double>> GSM, int &ja_sz);
+	//void GeneratePortrait(Portrait & Matrix, vector<vector<double>> GSM, int &ja_sz);
 };
 
 class Quadrilateral : public Element {
 public:
-	etype type = QUADR;
+	etype type = QUAD;
 	// одномерные базисные функции в шаблонных координатах
-	double bfunc1D(size_t fucn_num, double x0, double x1, double x) override;
+	double bfunc1D(size_t fucn_num, double ksi) override;
 	// производные одномерных бф в шаблонных координатах
-	double dbfunc1D(size_t func_num, double x0, double x1, double x) override;
+	double dbfunc1D(size_t func_num, double ksi) override;
 	// якобиан
 	double det_J(Point& p);
+
+	double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) override;
+	double Edge_IntegrateGauss3(Point& from, Point& to, size_t num) override;
+
+	void CalculateLocalStiffnessMatrix() override;
+	void CalculateLocalLoadVector(Load& P) override;
 
 	
 
@@ -135,14 +198,16 @@ public:
 
 	void AssembleGlobalStiffnessMatrix(Mesh& mesh);
 	vector<vector<double>> GlobalStiffnessMatrix;
+	vector<vector<block2x2>> GlobalStiffnessMatrix_block;
 
 	void AssembleGlobalLoadVector(Mesh& mesh);
-	vector<vector<double>> GlobalLoadVector;
+	vector<double> GlobalLoadVector;
+	vector<block1x2> GlobalLoadVector_block;
 
 	vector<int> loaded_nodes;
 	vector<int> fixed_nodes;
 
-	void GeneratePortrait(Portrait& portrait, vector<vector<double>> GSM, int ig_n_1);
+	void GeneratePortrait(Portrait& portrait, vector<vector<double>> GSM, int &ig_n_1);
 
 private:
 

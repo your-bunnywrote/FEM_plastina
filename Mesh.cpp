@@ -39,6 +39,16 @@ Mesh::Mesh(bool is_hole) {
 
 }
 
+etype Mesh::check_element_type(Cell& element) {
+	if ((element.loc_nodes[0].y == element.loc_nodes[1].y)
+		&& (element.loc_nodes[0].x == element.loc_nodes[3].x)
+		&& (element.loc_nodes[1].x == element.loc_nodes[2].x)
+		&& (element.loc_nodes[2].y == element.loc_nodes[3].y))
+		return RECT;
+	else
+		return QUAD;
+}
+
 //========================================================================
 
 void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {

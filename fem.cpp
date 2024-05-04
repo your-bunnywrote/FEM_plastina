@@ -230,6 +230,26 @@ double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, dou
 
 }
 
+double Quadrilateral::bfunc1D(size_t func_num, double ksi) {
+	return 1;
+}
+
+double Quadrilateral::dbfunc1D(size_t func_num, double ksi) {
+	return 1;
+}
+
+double Quadrilateral::det_J(Point& p) {
+	return 1;
+}
+
+double Quadrilateral::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) {
+	return 1;
+}
+
+double Quadrilateral::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
+	return 1;
+}
+
 
  // вызываем для коэффициента Kvar[num1][num2], где var - переменная, по которой дифференцируем функцию phi(x,y)
  // var = 0 - x, var = 1 - y, var = 2 - xy, var = 3 - yx;
@@ -418,7 +438,8 @@ double Rectangle::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
 
 // сюда будет поступать элемент из ранее созданного списка элементов
 // интегрирование для определения коэффициентов K для каждого узла будет проводиться непосредственно в этой функции
-void Rectangle::Calculate_LocalStiffnessMatrix(Element& element) {
+void Quadrilateral::CalculateLocalStiffnessMatrix() {
+	cout << "Calculate local stiffness matrix for Quad\n";
 	block2x2 block;
 	double Kx,	// для нее будем считать интеграл от базисных функций на каждом шаге цикла
 		Ky,
@@ -426,10 +447,10 @@ void Rectangle::Calculate_LocalStiffnessMatrix(Element& element) {
 		Kyx;
 	for (size_t i = 0; i < 4; i++) {
 		for (size_t j = 0; j < 4; j++) {
-			Kx = Element_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i, j, 0);
-			Ky = Element_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i, j, 1);
-			Kxy = Element_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i, j, 2);
-			Kyx = Element_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i, j, 3);
+			Kx = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 0);
+			Ky = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 1);
+			Kxy = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 2);
+			Kyx = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 3);
 			// блоки вычисляются так:
 			block.val11 = mat.thickness * (D[0][0] * Kx + D[2][2] * Ky);
 			block.val12 = mat.thickness * (D[0][1] * Kxy + D[2][2] * Kyx);
@@ -463,38 +484,197 @@ void Rectangle::Calculate_LocalStiffnessMatrix(Element& element) {
 
 }
 
+void Rectangle::CalculateLocalStiffnessMatrix() {
+	cout << "Calculate local stiffness matrix for Rectangle\n";
+	block2x2 block;
+	double Kx,	// для нее будем считать интеграл от базисных функций на каждом шаге цикла
+		Ky,
+		Kxy,
+		Kyx;
+	for (size_t i = 0; i < 4; i++) {
+		for (size_t j = 0; j < 4; j++) {
+			Kx = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 0);
+			Ky = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 1);
+			Kxy = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 2);
+			Kyx = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 3);
+			// блоки вычисляются так:
+			block.val11 = mat.thickness * (D[0][0] * Kx + D[2][2] * Ky);
+			block.val12 = mat.thickness * (D[0][1] * Kxy + D[2][2] * Kyx);
+			block.val21 = mat.thickness * (D[1][0] * Kyx + D[2][2] * Kxy);
+			block.val22 = mat.thickness * (D[2][2] * Kx + D[1][1] * Ky);
+			// и вносятся в локальную МЖ, так как она имеет блочную структуру (ее элементы - блоки)
+			LocalStiffnessMatrix_block[i][j] = block;
 
-void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
+		}
+	}
+
+	// переформатирование блочной локальной матрицы в поэлементный формат
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			// если мы сейчас находимся в нечетной строке матрицы, то заполняем строку значениями первых строк блоков
+			if ((i + 1) % 2 != 0) {
+				if ((j + 1) % 2 != 0)
+					LocalStiffnessMatrix[i][j] = LocalStiffnessMatrix_block[i / 2][j / 2].val11;
+				else
+					LocalStiffnessMatrix[i][j] = LocalStiffnessMatrix_block[i / 2][j / 2].val12;
+			}
+			// если в четной, то заполняем строку значениями вторых строк блоков
+			else {
+				if ((j + 1) % 2 != 0)
+					LocalStiffnessMatrix[i][j] = LocalStiffnessMatrix_block[i / 2][j / 2].val21;
+				else
+					LocalStiffnessMatrix[i][j] = LocalStiffnessMatrix_block[i / 2][j / 2].val22;
+			}
+		}
+	}
+
+}
+
+
+
+
+
+
+//void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
+//
+//	cout << "Assembling Global Stiffness Matrix...\n";
+//
+//	int nodes_count = mesh.nodes.size();
+//	block2x2 block;
+//	// глобальная матрица жесткости имеет размерность NxN, где N = количество_степеней_свободы_узла(2) * количество_узлов
+//	// если в блочном формате, то K*K, где K = количество_узлов, так как в каждом блоке лежит еще 4 значения (2 столбца, 2 строки)
+//	// так как Локальная и Глобальная матрицы жесткости состоят из блоков, память выделяем для блоков
+//	GlobalStiffnessMatrix_block.resize(nodes_count);
+//	for (int k = 0; k < nodes_count; k++) {
+//		GlobalStiffnessMatrix_block[k].resize(nodes_count);
+//	}
+//
+//	// собираем
+//	//for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
+//	//	Element current_element = mesh.elements[i_elem];
+//	//	//if ((current_element.loc_nodes[0].y == current_element.loc_nodes[1].y)
+//	//	//	&& (current_element.loc_nodes[0].x == current_element.loc_nodes[3].x)
+//	//	//	&& (current_element.loc_nodes[1].x == current_element.loc_nodes[2].x)
+//	//	//	&& (current_element.loc_nodes[2].y == current_element.loc_nodes[3].y))
+//	//	//	current_element.type = RECTANGLE;
+//	//	//else
+//	//	//	current_element.type = QUADR;
+//	//	Calculate_LocalStiffnessMatrix(current_element);
+//	//	for (int i = 0; i < 4; i++) {
+//	//		for (int j = 0; j < 4; j++) {
+//	//			GlobalStiffnessMatrix_block[current_element.loc_nodes[i].num - 1][current_element.loc_nodes[j].num - 1] += LocalStiffnessMatrix_block[i][j];
+//	//		}
+//	//	}
+//	//}
+//
+//
+//	// выделяем память под матрицу
+//	GlobalStiffnessMatrix.resize(nodes_count * 2);
+//	for (int i = 0; i < nodes_count * 2; i++) {
+//		GlobalStiffnessMatrix[i].resize(nodes_count * 2, 0);
+//	}
+//
+//
+//	// переформатирование глобальной матрицы в поэлементный вид
+//	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
+//
+//
+//
+//		Element current_element = mesh.elements[i_elem];
+//		Calculate_LocalStiffnessMatrix(current_element);
+//		for (int i = 0; i < 4; i++) {
+//			for (int j = 0; j < 4; j++) {
+//				int i_1 = current_element.loc_nodes[i].num - 1,
+//					j_1 = current_element.loc_nodes[j].num - 1;
+//				GlobalStiffnessMatrix[2 * i_1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val11;
+//				GlobalStiffnessMatrix[2 * i_1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val12;
+//				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val21;
+//				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val22;
+//			}
+//		}
+//	}
+//
+//
+//	
+//
+//
+//	// =========== Создание списка закрепленных узлов ==============
+//	// массив с закрепленными узлами можно сформировать, основываясь на совпадении координат узлов с координатами закрепленной кромки (данные берем из информации о расчетной области)
+//
+//	comp_domain domain = mesh.subdomain;
+//	for (size_t i = 0; i < mesh.nodes.size(); i++) {
+//		//if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+//		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
+//			fixed_nodes.push_back(mesh.nodes[i].num);					// coords[0].x - координата левой кромки пластины
+//																		// coords[1].x - координата отверстия пластины
+//																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
+//	}
+//
+//	// =========== Создание списка нагруженных узлов ==============
+//
+//	for (size_t i = 0; i < mesh.nodes.size(); i++) {
+//		//if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
+//		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
+//			loaded_nodes.push_back(mesh.nodes[i].num);
+//	}
+//
+//
+//
+//	for(int k = 0; k < fixed_nodes.size();k++) {		// !!!!! k от 0 до размер_массива_закрепленных_узлов
+//		for (int i = 0; i < GlobalStiffnessMatrix_block.size(); i++) {
+//			if (i == (fixed_nodes[k] - 1)) {	// если номер строки совпадает с номером закрепляемого узла
+//				for (int j = 0; j < GlobalStiffnessMatrix_block.size(); j++) {
+//					GlobalStiffnessMatrix_block[i][j] = 0;		// зануляем соответствующую строку
+//					GlobalStiffnessMatrix_block[j][i] = 0;		// зануляем соответствующий столбец
+//					GlobalStiffnessMatrix_block[i][i].val11 = 1;		// ставим на диагональ 1
+//					GlobalStiffnessMatrix_block[i][i].val22 = 1;
+//				}
+//			}
+//		}
+//	}
+//
+//	// применение условий закрепления к поэлементно собранной матрице
+//	for (int k = 0; k < fixed_nodes.size(); k++) {
+//		for (int i = 0; i < GlobalStiffnessMatrix.size()/2; i++) {
+//			if (i == (fixed_nodes[k] - 1)) {	// если номер строки совпадает с номером закрепленного узла
+//				for (int j = 0; j < GlobalStiffnessMatrix.size()/2; j++) {
+//					GlobalStiffnessMatrix[2 * i][2 * j] = 0;		// зануляем соответствующую строку
+//					GlobalStiffnessMatrix[2 * i][2 * j +1] = 0;		// зануляем соответствующую строку
+//					GlobalStiffnessMatrix[2 * i + 1][2 * j] = 0;		// зануляем соответствующую строку
+//					GlobalStiffnessMatrix[2 * i + 1][2 * j + 1] = 0;		// зануляем соответствующую строку
+//
+//
+//					GlobalStiffnessMatrix[2 * j][2 * i] = 0;		// зануляем соответствующий столбец
+//					GlobalStiffnessMatrix[2 * j][2 * i +1] = 0;		// зануляем соответствующий столбец
+//					GlobalStiffnessMatrix[2 * j + 1][2 * i] = 0;		// зануляем соответствующий столбец
+//					GlobalStiffnessMatrix[2 * j + 1][2 * i + 1] = 0;		// зануляем соответствующий столбец
+//
+//					GlobalStiffnessMatrix[2 * i][2 * i] = 1;		// ставим на диагональ 1
+//					//GlobalStiffnessMatrix[2 * i][2 * i +1] = 1;		// ставим на диагональ 1
+//					//GlobalStiffnessMatrix[2 * i + 1][2 * i] = 1;		// ставим на диагональ 1
+//					GlobalStiffnessMatrix[2 * i + 1][2 * i + 1] = 1;		// ставим на диагональ 1
+//				}
+//			}
+//		}
+//	}
+//
+//
+//
+//
+//
+//
+//	cout << "Assembling Global Stiffness Matrix complete\n";
+//}
+
+void FEM::AssembleGlobalStiffnessMatrix(Mesh& mesh) {
 
 	cout << "Assembling Global Stiffness Matrix...\n";
 
 	int nodes_count = mesh.nodes.size();
-	block2x2 block;
+	//block2x2 block;
 	// глобальная матрица жесткости имеет размерность NxN, где N = количество_степеней_свободы_узла(2) * количество_узлов
 	// если в блочном формате, то K*K, где K = количество_узлов, так как в каждом блоке лежит еще 4 значения (2 столбца, 2 строки)
 	// так как Локальная и Глобальная матрицы жесткости состоят из блоков, память выделяем для блоков
-	GlobalStiffnessMatrix_block.resize(nodes_count);
-	for (int k = 0; k < nodes_count; k++) {
-		GlobalStiffnessMatrix_block[k].resize(nodes_count);
-	}
-
-	// собираем
-	//for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-	//	Element current_element = mesh.elements[i_elem];
-	//	//if ((current_element.loc_nodes[0].y == current_element.loc_nodes[1].y)
-	//	//	&& (current_element.loc_nodes[0].x == current_element.loc_nodes[3].x)
-	//	//	&& (current_element.loc_nodes[1].x == current_element.loc_nodes[2].x)
-	//	//	&& (current_element.loc_nodes[2].y == current_element.loc_nodes[3].y))
-	//	//	current_element.type = RECTANGLE;
-	//	//else
-	//	//	current_element.type = QUADR;
-	//	Calculate_LocalStiffnessMatrix(current_element);
-	//	for (int i = 0; i < 4; i++) {
-	//		for (int j = 0; j < 4; j++) {
-	//			GlobalStiffnessMatrix_block[current_element.loc_nodes[i].num - 1][current_element.loc_nodes[j].num - 1] += LocalStiffnessMatrix_block[i][j];
-	//		}
-	//	}
-	//}
 
 
 	// выделяем память под матрицу
@@ -503,75 +683,73 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 		GlobalStiffnessMatrix[i].resize(nodes_count * 2, 0);
 	}
 
-
+	Element element;
+	Element* el;
+	Rectangle rect;
+	Quadrilateral quad;
+	element.init();
 	// переформатирование глобальной матрицы в поэлементный вид
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-		Element current_element = mesh.elements[i_elem];
-		Calculate_LocalStiffnessMatrix(current_element);
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				int i_1 = current_element.loc_nodes[i].num - 1,
-					j_1 = current_element.loc_nodes[j].num - 1;
-				GlobalStiffnessMatrix[2 * i_1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val11;
-				GlobalStiffnessMatrix[2 * i_1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val12;
-				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val21;
-				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val22;
-			}
-		}
+		element.type = mesh.check_element_type(mesh.elements[i_elem]);
+		if (element.type == RECT)
+			el = &rect;
+		else
+			el = &quad;
+		el->CalculateLocalStiffnessMatrix();	// проверить, как работает функция
+
+
+		//Element current_element = mesh.elements[i_elem];
+		//Calculate_LocalStiffnessMatrix(current_element);
+		//for (int i = 0; i < 4; i++) {
+		//	for (int j = 0; j < 4; j++) {
+		//		int i_1 = current_element.loc_nodes[i].num - 1,
+		//			j_1 = current_element.loc_nodes[j].num - 1;
+		//		GlobalStiffnessMatrix[2 * i_1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val11;
+		//		GlobalStiffnessMatrix[2 * i_1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val12;
+		//		GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val21;
+		//		GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val22;
+		//	}
+		//}
 	}
 
 
-	
+
 
 
 	// =========== Создание списка закрепленных узлов ==============
 	// массив с закрепленными узлами можно сформировать, основываясь на совпадении координат узлов с координатами закрепленной кромки (данные берем из информации о расчетной области)
 
-	comp_domain domain = mesh.subdomain;
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
 		//if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
-		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
+		if (mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
 			fixed_nodes.push_back(mesh.nodes[i].num);					// coords[0].x - координата левой кромки пластины
-																		// coords[1].x - координата отверстия пластины
-																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
+		// coords[1].x - координата отверстия пластины
+		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
 	}
 
 	// =========== Создание списка нагруженных узлов ==============
 
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
 		//if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
-		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
+		if (mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
 			loaded_nodes.push_back(mesh.nodes[i].num);
 	}
 
 
 
-	for(int k = 0; k < fixed_nodes.size();k++) {		// !!!!! k от 0 до размер_массива_закрепленных_узлов
-		for (int i = 0; i < GlobalStiffnessMatrix_block.size(); i++) {
-			if (i == (fixed_nodes[k] - 1)) {	// если номер строки совпадает с номером закрепляемого узла
-				for (int j = 0; j < GlobalStiffnessMatrix_block.size(); j++) {
-					GlobalStiffnessMatrix_block[i][j] = 0;		// зануляем соответствующую строку
-					GlobalStiffnessMatrix_block[j][i] = 0;		// зануляем соответствующий столбец
-					GlobalStiffnessMatrix_block[i][i].val11 = 1;		// ставим на диагональ 1
-					GlobalStiffnessMatrix_block[i][i].val22 = 1;
-				}
-			}
-		}
-	}
-
 	// применение условий закрепления к поэлементно собранной матрице
 	for (int k = 0; k < fixed_nodes.size(); k++) {
-		for (int i = 0; i < GlobalStiffnessMatrix.size()/2; i++) {
+		for (int i = 0; i < GlobalStiffnessMatrix.size() / 2; i++) {
 			if (i == (fixed_nodes[k] - 1)) {	// если номер строки совпадает с номером закрепленного узла
-				for (int j = 0; j < GlobalStiffnessMatrix.size()/2; j++) {
+				for (int j = 0; j < GlobalStiffnessMatrix.size() / 2; j++) {
 					GlobalStiffnessMatrix[2 * i][2 * j] = 0;		// зануляем соответствующую строку
-					GlobalStiffnessMatrix[2 * i][2 * j +1] = 0;		// зануляем соответствующую строку
+					GlobalStiffnessMatrix[2 * i][2 * j + 1] = 0;		// зануляем соответствующую строку
 					GlobalStiffnessMatrix[2 * i + 1][2 * j] = 0;		// зануляем соответствующую строку
 					GlobalStiffnessMatrix[2 * i + 1][2 * j + 1] = 0;		// зануляем соответствующую строку
 
 
 					GlobalStiffnessMatrix[2 * j][2 * i] = 0;		// зануляем соответствующий столбец
-					GlobalStiffnessMatrix[2 * j][2 * i +1] = 0;		// зануляем соответствующий столбец
+					GlobalStiffnessMatrix[2 * j][2 * i + 1] = 0;		// зануляем соответствующий столбец
 					GlobalStiffnessMatrix[2 * j + 1][2 * i] = 0;		// зануляем соответствующий столбец
 					GlobalStiffnessMatrix[2 * j + 1][2 * i + 1] = 0;		// зануляем соответствующий столбец
 
@@ -592,12 +770,13 @@ void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
 	cout << "Assembling Global Stiffness Matrix complete\n";
 }
 
-void Rectangle::Calculate_LocalLoadVector(Element& element, Load P) {
+
+void Quadrilateral::CalculateLocalLoadVector(Load& P) {
 	block1x2 block;
 
 	for (int i = 0; i < 4; i++) {
-		block.val1 = P.Px * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i);
-		block.val2 = P.Py * Edge_IntegrateGauss3(element.loc_nodes[0], element.loc_nodes[2], i);
+		block.val1 = P.Px * Edge_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i);
+		block.val2 = P.Py * Edge_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i);
 
 		LocalLoadVector_block[i] = block;
 	}
@@ -611,7 +790,85 @@ void Rectangle::Calculate_LocalLoadVector(Element& element, Load P) {
 
 }
 
-void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
+void Rectangle::CalculateLocalLoadVector(Load& P) {
+	block1x2 block;
+
+	for (int i = 0; i < 4; i++) {
+		block.val1 = P.Px * Edge_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i);
+		block.val2 = P.Py * Edge_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i);
+
+		LocalLoadVector_block[i] = block;
+	}
+	// переформатирование локального вектора нагрузок в поэлементный формат
+	for (int i = 0; i < LocalLoadVector.size(); i++) {
+		if ((i + 1) % 2 != 0)
+			LocalLoadVector[i] = LocalLoadVector_block[i / 2].val1;
+		else
+			LocalLoadVector[i] = LocalLoadVector_block[i / 2].val2;
+	}
+
+}
+
+
+//void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
+//	cout << "\nAssembling Global Load Vector...\n";
+//	int nodes_count = mesh.nodes.size();
+//	Load P;
+//	//P.GetLineLength(mesh);
+//	block1x2 block;
+//	// размер вектора нагрузок - 1хN, где N = количество_степеней_свободы_узла(2) * количество_узлов
+//	// в блочном формате - 1xK, где K = количество_узлов
+//	GlobalLoadVector_block.resize(nodes_count);
+//
+//	// собираем
+//	// вектор нагрузки должен считаться только для тех элементов, ребра которых подвержены нагрузке
+//	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
+//		Element current_element = mesh.elements[i_elem];
+//		for (int i_node = 0; i_node < loaded_nodes.size(); i_node++) {
+//			// если левое ребро элемента нагружено (т. е. его первый или четвертый узел лежат на нагруженной кромке), то он имеет вклад в вектор нагрузок и считаем для него локальный вектор
+//			if (current_element.loc_nodes[0].num == loaded_nodes[i_node] || current_element.loc_nodes[3].num == loaded_nodes[i_node]) {
+//				Calculate_LocalLoadVector(current_element, P);
+//				if (current_element.loc_nodes[0].num == loaded_nodes[i_node])
+//					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[0];
+//				if (current_element.loc_nodes[3].num == loaded_nodes[i_node])
+//					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[3];
+//			}
+//		}
+//	}
+//
+//	GlobalLoadVector.resize(nodes_count * 2,0);
+//
+//	// сборка глобального вектора нагрузок в поэлементом формате
+//	for (int i = 0; i < GlobalLoadVector_block.size(); i++) {
+//		GlobalLoadVector[2 * i] = GlobalLoadVector_block[i].val1;
+//		GlobalLoadVector[2 * i + 1] = GlobalLoadVector_block[i].val2;
+//	}
+//
+//
+//
+//	// применяем условия закрепления к узлам в собранном векторе нагрузок
+//	for (int k = 0; k <fixed_nodes.size(); k++) {		
+//		for (int i = 0; i < GlobalStiffnessMatrix_block.size(); i++) {
+//			if (i == (fixed_nodes[k] - 1)) {
+//				GlobalLoadVector_block[i] = 0;		// зануляем соответствующую строку
+//			}
+//		}
+//	}
+//
+//	// применение условий закрепления к глобальному вектору нагрузок в поэлементном формате
+//	for (int k = 0; k < fixed_nodes.size(); k++) {
+//		for (int i = 0; i < GlobalLoadVector.size()/2; i++) {
+//			if (i == (fixed_nodes[k] - 1)) {
+//				GlobalLoadVector[2 * i] = 0;		// зануляем соответствующую строку
+//				GlobalLoadVector[2 * i + 1] = 0;
+//			}
+//		}
+//	}
+//
+//	cout << "Assembling Global load Vector complete\n";
+//}
+
+void FEM::AssembleGlobalLoadVector(Mesh& mesh) {
 	cout << "\nAssembling Global Load Vector...\n";
 	int nodes_count = mesh.nodes.size();
 	Load P;
@@ -620,24 +877,36 @@ void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
 	// размер вектора нагрузок - 1хN, где N = количество_степеней_свободы_узла(2) * количество_узлов
 	// в блочном формате - 1xK, где K = количество_узлов
 	GlobalLoadVector_block.resize(nodes_count);
+	GlobalLoadVector.resize(2 * nodes_count);
 
 	// собираем
 	// вектор нагрузки должен считаться только для тех элементов, ребра которых подвержены нагрузке
+	Element element;
+	Element* el;
+	Rectangle rect;
+	Quadrilateral quad;
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-		Element current_element = mesh.elements[i_elem];
+		Cell current_element = mesh.elements[i_elem];
+		element.type = mesh.check_element_type(current_element);
 		for (int i_node = 0; i_node < loaded_nodes.size(); i_node++) {
 			// если левое ребро элемента нагружено (т. е. его первый или четвертый узел лежат на нагруженной кромке), то он имеет вклад в вектор нагрузок и считаем для него локальный вектор
 			if (current_element.loc_nodes[0].num == loaded_nodes[i_node] || current_element.loc_nodes[3].num == loaded_nodes[i_node]) {
-				Calculate_LocalLoadVector(current_element, P);
+				if (element.type == RECT)
+					el = &rect;
+				else
+					el = &quad;
+				el->CalculateLocalLoadVector(P);
+
+
 				if (current_element.loc_nodes[0].num == loaded_nodes[i_node])
-					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[0];
+					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += el->LocalLoadVector_block[0];
 				if (current_element.loc_nodes[3].num == loaded_nodes[i_node])
-					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[3];
+					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += el->LocalLoadVector_block[3];
 			}
 		}
 	}
 
-	GlobalLoadVector.resize(nodes_count * 2,0);
+	GlobalLoadVector.resize(nodes_count * 2, 0);
 
 	// сборка глобального вектора нагрузок в поэлементом формате
 	for (int i = 0; i < GlobalLoadVector_block.size(); i++) {
@@ -648,7 +917,7 @@ void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
 
 
 	// применяем условия закрепления к узлам в собранном векторе нагрузок
-	for (int k = 0; k <fixed_nodes.size(); k++) {		
+	for (int k = 0; k < fixed_nodes.size(); k++) {
 		for (int i = 0; i < GlobalStiffnessMatrix_block.size(); i++) {
 			if (i == (fixed_nodes[k] - 1)) {
 				GlobalLoadVector_block[i] = 0;		// зануляем соответствующую строку
@@ -658,7 +927,7 @@ void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
 
 	// применение условий закрепления к глобальному вектору нагрузок в поэлементном формате
 	for (int k = 0; k < fixed_nodes.size(); k++) {
-		for (int i = 0; i < GlobalLoadVector.size()/2; i++) {
+		for (int i = 0; i < GlobalLoadVector.size() / 2; i++) {
 			if (i == (fixed_nodes[k] - 1)) {
 				GlobalLoadVector[2 * i] = 0;		// зануляем соответствующую строку
 				GlobalLoadVector[2 * i + 1] = 0;
@@ -667,10 +936,12 @@ void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
 	}
 
 	cout << "Assembling Global load Vector complete\n";
+
 }
 
 
-void Rectangle::GeneratePortrait(Portrait& portrait,vector<vector<double>> GSM, int &ja_sz) {
+
+void FEM::GeneratePortrait(Portrait& portrait,vector<vector<double>> GSM, int &ja_sz) {
 	cout << "Generating Portrait...\n";
 	int ggl_size = 0;
 	int temp = 0;

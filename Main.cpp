@@ -254,44 +254,41 @@ int main() {
 	CreateMesh(mesh, filename_nodes, filename_elements);
 
 
-	Rectangle rect;
-	//Element element = mesh.elements[0];
-
-	rect.Assemble_GlobalStiffnessMatrix(mesh);
-	rect.Assemble_GlobalLoadVector(mesh);
+	FEM fem;
+	fem.AssembleGlobalStiffnessMatrix(mesh);
 	
 	ofstream out;
 
 
-	out.open(output_folder + "\\out_stiffness_matrix.txt");
-	cout << "Printing results...\n";
+	//out.open(output_folder + "\\out_stiffness_matrix.txt");
+	//cout << "Printing results...\n";
 
-	for (int i = 0; i < rect.GlobalStiffnessMatrix.size(); i++) {
-		for (int j = 0; j < rect.GlobalStiffnessMatrix.size(); j++) {
-			out << rect.GlobalStiffnessMatrix[i][j] << "\t";
-		}
-		out << "\n";
-	}
-
-
-	out.close();
-	out.open(output_folder + "\\out_loads_vec.txt");
-
-	for (int i = 0; i < rect.GlobalLoadVector.size(); i++) {
-		out << rect.GlobalLoadVector[i] << "\n";
-	}
-	cout << "Results has been printed\n";
-	out.close();
+	//for (int i = 0; i < rect.GlobalStiffnessMatrix.size(); i++) {
+	//	for (int j = 0; j < rect.GlobalStiffnessMatrix.size(); j++) {
+	//		out << rect.GlobalStiffnessMatrix[i][j] << "\t";
+	//	}
+	//	out << "\n";
+	//}
 
 
-	int n = rect.GlobalStiffnessMatrix.size();
+	//out.close();
+	//out.open(output_folder + "\\out_loads_vec.txt");
+
+	//for (int i = 0; i < rect.GlobalLoadVector.size(); i++) {
+	//	out << rect.GlobalLoadVector[i] << "\n";
+	//}
+	//cout << "Results has been printed\n";
+	//out.close();
+
+
+	int n = fem.GlobalStiffnessMatrix.size();
 	Portrait portrait(n);
 	int ig_n_1 = 0;
-	rect.GeneratePortrait(portrait, rect.GlobalStiffnessMatrix, ig_n_1);
+	fem.GeneratePortrait(portrait, fem.GlobalStiffnessMatrix, ig_n_1);
 
 	double* b = new double[n];
 	for (int i = 0; i < n; i++) {
-		b[i] = rect.GlobalLoadVector[i];
+		b[i] = fem.GlobalLoadVector[i];
 	}
 
 	int sz_ia = 0;

@@ -18,55 +18,9 @@ public:
 
 };
 
-enum etype { RECTANGLE, QUADR };
-// если экземпл€ры класса нигде не создаютс€, то он абстрактный
-class Element {
-public:
-	etype type;
-	vector<Point> loc_nodes;
-	size_t num;
-	Material mat;
-	// –≈ƒј “»–ќ¬ј“№: можно заменить на обычный двумерный массив
-	vector<vector<double>> D = {{mat.c, mat.c * mat.mu, 0},
-							   {mat.c * mat.mu, mat.c * 1, 0},
-							   {0, 0, mat.c * (1 - mat.mu)/2}};	// матрица упругости, дл€ изотропного материала имеюща€ вид		
-	//												    E   |1 mu	 0	  |
-	//											D  = ------	|mu 1	 0	  |
-	//												 1-mu^2 |0  0 (1-mu)/2|
-	Element();
-	void init();
-protected:
-	void twoD_to_oneD(size_t i, size_t& mu, size_t& nu);
-
-	// базисные функции и их производные дл€ пр€моугольного элемента в глобальных координатах
-	virtual double bfunc1D(size_t func_num, double x0, double x1, double x) {
-		return 1;
-	};
-	virtual double dbfunc1D(size_t func_num, double x0, double x1, double x) {
-		return 1;
-	};
-
-	// базисные функции и их производные дл€ четыреъугольного элемента в шаблонных координатах
-	virtual double bfunc1D(size_t func_num, double ksi) {
-		return 1;
-	}
-	virtual double dbfunc2D(size_t func_num, double ksi) {
-		return 1;
-	}
-
-	virtual void CalculateLocalStiffnessMatrix() {};
-	virtual void CalculateLocalLoadVector() {};
-
-private:
-	double gauss_points_local[3];
-	double gauss_weights[3];
-	Point integrate_points[9];
-	
-
-
-};
 
 //  ласс €чейки, эквивалентный элементу, но содержащий в себе только информацию о геометрии
+enum etype {RECT,QUAD};
 class Cell {
 public:
 	vector<Point> loc_nodes;
@@ -93,7 +47,7 @@ public:
 	// вычисление координат узлов сетки с круговым отверстием
 	// так как дл€ вычислени€ координат нам нужны координаты интервалов горизонтальных и вертикальных линий, эта функци€ должна быть членом класса comp_domain или Mesh
 	void calculate_coords(vector<double>& x, vector<double>& y);
-
+	etype check_element_type(Cell& element);
 };
 
 // дл€ разделени€ считываемых параметров во врем€ чтени€
