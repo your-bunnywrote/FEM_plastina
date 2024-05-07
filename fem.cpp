@@ -142,6 +142,7 @@ Element::Element() {
 }
 
 void Element::init() {
+	// точки √аусса на двумерном мастер-элементе [-1,1]x[-1,1]
 	gauss_points_local[0] = -0.77459666924148337703585307995648;
 	gauss_points_local[1] = 0.;
 	gauss_points_local[2] = 0.77459666924148337703585307995648;
@@ -160,16 +161,12 @@ void Element::init() {
 }
 
 
-void Rectangle::init()
-{
-
-}
 
 
 double Rectangle::bfunc1D(size_t func_num, double x0, double x1, double x) {
 	switch (func_num) {
 	case 0:
-		return (x1 - x) / (x1 - x0);	// = 1-ksi - в шаблонных (безразмерных) координатах, где ksi = (x-x1)/(x1-x0)
+		return (x1 - x) / (x1 - x0);	// = 1-ksi - в шаблонных (безразмерных) координатах, где ksi = (x-x0)/(x1-x0)
 	case 1:
 		return (x - x0) / (x1 - x0);	// = ksi
 	}
@@ -230,25 +227,61 @@ double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, dou
 
 }
 
+
+
+Quadrilateral::Quadrilateral() {
+	alpha0 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[1].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[3].x - loc_nodes[0].x);
+	alpha1 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[2].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[3].x);
+	alpha2 = (loc_nodes[3].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[1].x) - (loc_nodes[3].x - loc_nodes[0].x) * (loc_nodes[2].y - loc_nodes[2].y);
+	beta1 = loc_nodes[3].x - loc_nodes[0].x;
+	beta2 = loc_nodes[1].x - loc_nodes[0].x;
+	beta3 = loc_nodes[3].y - loc_nodes[0].y;
+	beta4 = loc_nodes[1].y - loc_nodes[0].y;
+	beta5 = loc_nodes[0].x - loc_nodes[1].x - loc_nodes[3].x + loc_nodes[2].x;
+	beta6 = loc_nodes[0].y - loc_nodes[1].y - loc_nodes[3].y + loc_nodes[2].y;
+
+	// переход с √ауссова мастер-элемента [-1,1]x[-1,1] на шаблонный [0,1]x[0,1]
+	int p_id = 0;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			integrate_points[i] = Point((gauss_points_local[i] + 1.0) / 2, (gauss_points_local[j] + 1.0) / 2);
+		}
+	}
+
+}
+
 double Quadrilateral::bfunc1D(size_t func_num, double ksi) {
-	return 1;
+	switch (func_num) {
+	case 0:
+		return 1 - ksi;
+	case 1:
+		return ksi;
+	}
 }
 
 double Quadrilateral::dbfunc1D(size_t func_num, double ksi) {
-	return 1;
+	switch (func_num) {
+	case 0:
+		return -1;
+	case 1:
+		return 1;
+	}
+}
+
+
+
+
+Point Quadrilateral::to_global(Point& p) {
+	double x = (1 - p.x) * (1 - p.y) * loc_nodes[0].x + p.x * (1 - p.y) * loc_nodes[1].x + p.x * p.y * loc_nodes[2].x + (1 - p.x) * p.y * loc_nodes[3].x;
+	double y = (1 - p.x) * (1 - p.y) * loc_nodes[0].y + p.x * (1 - p.y) * loc_nodes[1].y + p.x * p.y * loc_nodes[2].y + (1 - p.x) * p.y * loc_nodes[3].y;
+	return Point(x, y);
 }
 
 double Quadrilateral::det_J(Point& p) {
-	return 1;
+	double J = alpha0 + alpha1 * p.x + alpha2 * p.y;
+	return J;
 }
 
-double Quadrilateral::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) {
-	return 1;
-}
-
-double Quadrilateral::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
-	return 1;
-}
 
 
  // вызываем дл€ коэффициента Kvar[num1][num2], где var - переменна€, по которой дифференцируем функцию phi(x,y)
@@ -396,18 +429,25 @@ double Rectangle::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, s
 		   y_centre = (to.y + from.y) / 2.;
 	double hx = to.x - from.x,
 		   hy = to.y - from.y;
-	double ksi, eta;
+	double x, y;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
 			// переходим в глобальные координаты элемента
-			ksi = x_centre + integrate_points[p_id].x * hx / 2.;
-			eta = y_centre + integrate_points[p_id].y * hy / 2.;
+			x = x_centre + integrate_points[p_id].x * hx / 2.;
+			y = y_centre + integrate_points[p_id].y * hy / 2.;
 			// и интегрируем в глобальных координатах
-			res += gauss_weights[i] * gauss_weights[j] * dphi(var, num1, num2, from, to, ksi, eta);
+			res += gauss_weights[i] * gauss_weights[j] * dphi(var, num1, num2, from, to, x, y);
 			p_id++;
 		}
 	}
 	return res * hx * hy / 4.0;	// hx*hy/4 - якобиан перехода из локальных координат интегрировани€ в глобальные в двумерном случае
+}
+
+double Quadrilateral::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) {
+	
+	int p_id = 0;
+
+	
 }
 
 
@@ -433,6 +473,10 @@ double Rectangle::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
 		//}
 	}
 	return res;
+}
+
+double Quadrilateral::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
+	return 1;
 }
 
 
