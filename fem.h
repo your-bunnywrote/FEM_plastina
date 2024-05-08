@@ -74,7 +74,7 @@ protected:
 class Rectangle : public Element {
 public:
 	etype type = RECT;
-	static void init();
+	//static void init();
 	Rectangle();
 	// ќдномерные линейные функции формы
 	// Ќесмотр€ на аргументы x0, x1, x, функции также примен€ютс€ дл€ вычислений функций по Y, так как имеют одинаковый вид
@@ -136,7 +136,12 @@ public:
 	double bfunc1D(size_t fucn_num, double ksi) override;
 	// производные одномерных бф в шаблонных координатах
 	double dbfunc1D(size_t func_num, double ksi) override;
-	// якобиан
+
+	double phi(size_t func_num, Point& ksi);
+
+	double dphi(size_t func_num, Point& ksi);
+
+	// якобиан преобразовани€ координат шаблонного элемента [ksi,eta] в координаты глобального [x,y]
 	double det_J(Point& p);
 
 	double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) override;
@@ -145,8 +150,8 @@ public:
 	void CalculateLocalStiffnessMatrix() override;
 	void CalculateLocalLoadVector(Load& P) override;
 
-	
-
+	Point to_global(Point& p);
+	Quadrilateral();
 private:
 	double alpha0, alpha1, alpha2;
 	double beta1, beta2, beta3, beta4, beta5, beta6;
