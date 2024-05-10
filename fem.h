@@ -43,6 +43,7 @@ public:
 	};
 
 protected:
+	// получение номера одномерной бф через номер двухмерной
 	void twoD_to_oneD(size_t i, size_t& mu, size_t& nu);
 
 	// базисные функции и их производные дл€ пр€моугольного элемента в глобальных координатах
@@ -62,7 +63,7 @@ protected:
 	}
 	double gauss_points_local[3];
 	double gauss_weights[3];
-	Point integrate_points[9];
+
 
 
 
@@ -73,7 +74,7 @@ protected:
 
 class Rectangle : public Element {
 public:
-	etype type = RECT;
+	//etype type = RECT;
 	//static void init();
 	Rectangle();
 	// ќдномерные линейные функции формы
@@ -127,24 +128,27 @@ public:
 	// конвертирование матрицы в разреженный формат дл€ использовани€ в PARDISO
 	
 	//void GeneratePortrait(Portrait & Matrix, vector<vector<double>> GSM, int &ja_sz);
+	Point integrate_points[9];
 };
 
 class Quadrilateral : public Element {
 public:
-	etype type = QUAD;
+	//etype type = QUAD;
 	// одномерные базисные функции в шаблонных координатах
 	double bfunc1D(size_t fucn_num, double ksi) override;
 	// производные одномерных бф в шаблонных координатах
 	double dbfunc1D(size_t func_num, double ksi) override;
 
-	double phi(size_t func_num, Point& ksi);
+	double phi(size_t func_num, double ksi, double eta);
 
-	double dphi(size_t func_num, Point& ksi);
+	Point dphi(size_t func_num, double ksi, double eta);
+
+	double grad_bfunc_2d(size_t var, size_t num, double ksi, double eta);
 
 	// якобиан преобразовани€ координат шаблонного элемента [ksi,eta] в координаты глобального [x,y]
-	double det_J(Point& p);
+	double det_J(double ksi, double eta);
 
-	double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) override;
+	double Element_IntegrateGauss3(size_t i, size_t j, size_t var1, size_t var2);
 	double Edge_IntegrateGauss3(Point& from, Point& to, size_t num) override;
 
 	void CalculateLocalStiffnessMatrix() override;
@@ -152,6 +156,7 @@ public:
 
 	Point to_global(Point& p);
 	Quadrilateral();
+	Point integrate_points[9];
 private:
 	double alpha0, alpha1, alpha2;
 	double beta1, beta2, beta3, beta4, beta5, beta6;

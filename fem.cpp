@@ -100,13 +100,15 @@ ostream& operator<<(ostream& os, const block1x2& block) {
 };
 
 void Element::twoD_to_oneD(size_t i, size_t& mu, size_t& nu) {
-	mu = ((i + 1) / 2) % 2;
-	nu = i / 2;
+	mu = ((i + 1) / 2) % 2;		// mu(i): mu(0) = 0, mu(1) = 1, mu(2) = 1, mu(3) = 0
+	nu = i / 2;					// nu(i): nu(0) = 0, nu(1) = 0, nu(2) = 1, nu(3) = 1
 }
 
 
-Rectangle::Rectangle() {
-	
+
+Element::Element() {
+	loc_nodes.resize(4);
+
 	LocalStiffnessMatrix_block.resize(4);
 	for (int i = 0; i < 4; i++) {
 		LocalStiffnessMatrix_block[i].resize(4);
@@ -118,30 +120,6 @@ Rectangle::Rectangle() {
 	LocalLoadVector_block.resize(4);
 	LocalLoadVector.resize(8);
 
-	gauss_points_local[0] = -0.77459666924148337703585307995648;
-	gauss_points_local[1] = 0.;
-	gauss_points_local[2] = 0.77459666924148337703585307995648;
-
-	gauss_weights[0] = 5. / 9.;
-	gauss_weights[1] = 8. / 9.;
-	gauss_weights[2] = 5. / 9.;
-
-	int p_id = 0;
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			integrate_points[p_id] = Point(gauss_points_local[j], gauss_points_local[i]);
-			p_id++;
-		}
-	}
-
-}
-
-
-Element::Element() {
-	loc_nodes.resize(4);
-}
-
-void Element::init() {
 	// точки √аусса на двумерном мастер-элементе [-1,1]x[-1,1]
 	gauss_points_local[0] = -0.77459666924148337703585307995648;
 	gauss_points_local[1] = 0.;
@@ -150,7 +128,11 @@ void Element::init() {
 	gauss_weights[0] = 5. / 9.;
 	gauss_weights[1] = 8. / 9.;
 	gauss_weights[2] = 5. / 9.;
+}
 
+
+Rectangle::Rectangle() {
+	loc_nodes = Element::loc_nodes;
 	int p_id = 0;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
@@ -158,6 +140,13 @@ void Element::init() {
 			p_id++;
 		}
 	}
+
+}
+
+
+
+void Element::init() {
+
 }
 
 
@@ -230,6 +219,7 @@ double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, dou
 
 
 Quadrilateral::Quadrilateral() {
+	loc_nodes = Element::loc_nodes;
 	alpha0 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[1].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[3].x - loc_nodes[0].x);
 	alpha1 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[2].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[3].x);
 	alpha2 = (loc_nodes[3].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[1].x) - (loc_nodes[3].x - loc_nodes[0].x) * (loc_nodes[2].y - loc_nodes[1].y);
@@ -268,7 +258,17 @@ double Quadrilateral::dbfunc1D(size_t func_num, double ksi) {
 	}
 }
 
+Point Quadrilateral::dphi(size_t num, double ksi, double eta) {
+	size_t mu = 0, nu = 0;
+	twoD_to_oneD(num, mu, nu);
 
+	double W_mu = bfunc1D(mu, ksi);
+	double dW_mu = dbfunc1D(mu, ksi);
+	double W_nu = bfunc1D(nu, eta);
+	double dW_nu = dbfunc1D(nu, eta);
+
+	return Point(dW_mu * W_nu, W_mu * dW_nu);
+}
 
 
 Point Quadrilateral::to_global(Point& p) {
@@ -277,11 +277,30 @@ Point Quadrilateral::to_global(Point& p) {
 	return Point(x, y);
 }
 
-double Quadrilateral::det_J(Point& p) {
-	double J = alpha0 + alpha1 * p.x + alpha2 * p.y;
+double Quadrilateral::det_J(double ksi, double eta) {
+	double J = alpha0 + alpha1 * ksi + alpha2 * eta;
 	return J;
 }
 
+
+double Quadrilateral::grad_bfunc_2d(size_t num,size_t var, double ksi, double eta) {
+	//size_t mu = 0, nu = 0;
+	//twoD_to_oneD(num, mu, nu);
+
+	double dphi_dksi = dphi(num, ksi, eta).x;
+	double dphi_deta = dphi(num, ksi, eta).y;
+
+	switch (var) {
+	// дл€ Kx
+	case 0:
+		return dphi_dksi * (beta6 * ksi + beta3) - dphi_deta * (beta6 * eta + beta4);
+	// дл€ Ky
+	case 1:
+		return -dphi_dksi * (beta5 * ksi + beta1) + dphi_deta * (beta5 * eta + beta2);
+
+	}
+
+}
 
 
  // вызываем дл€ коэффициента Kvar[num1][num2], где var - переменна€, по которой дифференцируем функцию phi(x,y)
@@ -443,11 +462,28 @@ double Rectangle::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, s
 	return res * hx * hy / 4.0;	// hx*hy/4 - якобиан перехода из локальных координат интегрировани€ в глобальные в двумерном случае
 }
 
-double Quadrilateral::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) {
+
+
+double Quadrilateral::Element_IntegrateGauss3(size_t i, size_t j, size_t dvar1, size_t dvar2) {
 	
 	int p_id = 0;
+	double res = 0.0;
+	double func = 0.0;
+	double ksi = 0.0, eta = 0.0;
+	double J = 0.0;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			ksi = integrate_points[p_id].x;
+			eta = integrate_points[p_id].y;
+			func = grad_bfunc_2d(i, dvar1, ksi, eta) * grad_bfunc_2d(j, dvar2, ksi, eta);
+			J = det_J(ksi, eta);
+			func /= J;
+			res += gauss_weights[i] * gauss_weights[j] * func;
 
-	
+
+		}
+	}
+	return res / 4.0;
 }
 
 
@@ -491,10 +527,10 @@ void Quadrilateral::CalculateLocalStiffnessMatrix() {
 		Kyx;
 	for (size_t i = 0; i < 4; i++) {
 		for (size_t j = 0; j < 4; j++) {
-			Kx = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 0);
-			Ky = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 1);
-			Kxy = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 2);
-			Kyx = Element_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i, j, 3);
+			Kx = Element_IntegrateGauss3(i, j, 0, 0);
+			Ky = Element_IntegrateGauss3(i, j, 1, 1);
+			Kxy = Element_IntegrateGauss3(i, j, 0, 1);
+			Kyx = Element_IntegrateGauss3(i, j, 1, 0);
 			// блоки вычисл€ютс€ так:
 			block.val11 = mat.thickness * (D[0][0] * Kx + D[2][2] * Ky);
 			block.val12 = mat.thickness * (D[0][1] * Kxy + D[2][2] * Kyx);
@@ -728,32 +764,34 @@ void FEM::AssembleGlobalStiffnessMatrix(Mesh& mesh) {
 	}
 
 	Element element;
-	Element* el;
-	Rectangle rect;
-	Quadrilateral quad;
 	element.init();
+	Element* el;
+	//Rectangle rect;
+	//Quadrilateral quad;
 	// переформатирование глобальной матрицы в поэлементный вид
+	element.loc_nodes[0].x = 1.;
+	Rectangle rect1;
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
+		element.loc_nodes = mesh.elements[i_elem].loc_nodes;
 		element.type = mesh.check_element_type(mesh.elements[i_elem]);
+		Rectangle rect;
+		Quadrilateral quad;
 		if (element.type == RECT)
 			el = &rect;
 		else
 			el = &quad;
 		el->CalculateLocalStiffnessMatrix();	// проверить, как работает функци€
 
-
-		//Element current_element = mesh.elements[i_elem];
-		//Calculate_LocalStiffnessMatrix(current_element);
-		//for (int i = 0; i < 4; i++) {
-		//	for (int j = 0; j < 4; j++) {
-		//		int i_1 = current_element.loc_nodes[i].num - 1,
-		//			j_1 = current_element.loc_nodes[j].num - 1;
-		//		GlobalStiffnessMatrix[2 * i_1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val11;
-		//		GlobalStiffnessMatrix[2 * i_1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val12;
-		//		GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val21;
-		//		GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val22;
-		//	}
-		//}
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				int i_1 = el->loc_nodes[i].num - 1,
+					j_1 = el->loc_nodes[j].num - 1;
+				GlobalStiffnessMatrix[2 * i_1][2 * j_1] += el->LocalStiffnessMatrix_block[i][j].val11;
+				GlobalStiffnessMatrix[2 * i_1][2 * j_1 + 1] += el->LocalStiffnessMatrix_block[i][j].val12;
+				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1] += el->LocalStiffnessMatrix_block[i][j].val21;
+				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1 + 1] += el->LocalStiffnessMatrix_block[i][j].val22;
+			}
+		}
 	}
 
 
