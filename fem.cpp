@@ -131,8 +131,9 @@ Element::Element() {
 }
 
 
-Rectangle::Rectangle() {
-	loc_nodes = Element::loc_nodes;
+
+Rectangle::Rectangle(vector<Point>& local_nodes) {
+	this->loc_nodes = local_nodes;
 	int p_id = 0;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
@@ -144,10 +145,6 @@ Rectangle::Rectangle() {
 }
 
 
-
-void Element::init() {
-
-}
 
 
 
@@ -218,8 +215,8 @@ double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, dou
 
 
 
-Quadrilateral::Quadrilateral() {
-	loc_nodes = Element::loc_nodes;
+Quadrilateral::Quadrilateral(vector<Point>& local_nodes) {
+	this->loc_nodes = local_nodes;
 	alpha0 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[1].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[3].x - loc_nodes[0].x);
 	alpha1 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[2].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[3].x);
 	alpha2 = (loc_nodes[3].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[1].x) - (loc_nodes[3].x - loc_nodes[0].x) * (loc_nodes[2].y - loc_nodes[1].y);
@@ -234,7 +231,8 @@ Quadrilateral::Quadrilateral() {
 	int p_id = 0;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
-			integrate_points[i] = Point((gauss_points_local[i] + 1.0) / 2, (gauss_points_local[j] + 1.0) / 2);
+			integrate_points[p_id] = Point((gauss_points_local[j] + 1.0) / 2, (gauss_points_local[i] + 1.0) / 2);
+			p_id++;
 		}
 	}
 
@@ -257,6 +255,14 @@ double Quadrilateral::dbfunc1D(size_t func_num, double ksi) {
 		return 1;
 	}
 }
+
+double Quadrilateral::phi(size_t func_num, double ksi, double eta) {
+	size_t mu = 0, nu = 0;
+	twoD_to_oneD(func_num, mu, nu);
+	return bfunc1D(mu, ksi) * bfunc1D(nu, eta);
+}
+
+
 
 Point Quadrilateral::dphi(size_t num, double ksi, double eta) {
 	size_t mu = 0, nu = 0;
@@ -464,7 +470,7 @@ double Rectangle::Element_IntegrateGauss3(Point& from, Point& to, size_t num1, s
 
 
 
-double Quadrilateral::Element_IntegrateGauss3(size_t i, size_t j, size_t dvar1, size_t dvar2) {
+double Quadrilateral::Element_IntegrateGauss3(size_t i_grad, size_t j_grad, size_t dvar1, size_t dvar2) {
 	
 	int p_id = 0;
 	double res = 0.0;
@@ -475,12 +481,12 @@ double Quadrilateral::Element_IntegrateGauss3(size_t i, size_t j, size_t dvar1, 
 		for (int j = 0; j < 3; j++) {
 			ksi = integrate_points[p_id].x;
 			eta = integrate_points[p_id].y;
-			func = grad_bfunc_2d(i, dvar1, ksi, eta) * grad_bfunc_2d(j, dvar2, ksi, eta);
+			func = grad_bfunc_2d(i_grad, dvar1, ksi, eta) * grad_bfunc_2d(j_grad, dvar2, ksi, eta);
 			J = det_J(ksi, eta);
 			func /= J;
 			res += gauss_weights[i] * gauss_weights[j] * func;
 
-
+			p_id++;
 		}
 	}
 	return res / 4.0;
@@ -500,7 +506,16 @@ double Rectangle::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
 	for (int g = 0; g < 3; g++) {
 		//ksi = x_centre + gauss_points_local[g] * hx/2;
 		eta = y_centre + gauss_points_local[g] * hy / 2.;
-		res += hy / 2. * gauss_weights[g] * bfunc1D(mu,from.y, to.y, eta);
+		switch (num) {
+		case 0:
+			res += gauss_weights[g] * bfunc1D(mu, from.y, to.y, eta); break;
+		//case 1:
+		//	res+= gauss_weights[g] * bfunc1D(mu, from.x, to.x, ksi); break;
+		//case 2:
+		//	res += gauss_weights[g] * bfunc1D(mu, from.x, to.x, ksi); break;
+		case 3:
+			res += gauss_weights[g] * bfunc1D(mu, from.y, to.y, eta); break;
+		}
 		//switch (num) {
 		//case 0: res += hy / 2. * gauss_weights[g] * bfunc1D_1(from.y, to.y, eta); break;	// если нагрузка приложена к левой или правой кромке (параллельны у) то интеригруем одномерную б.ф. Y1
 		//case 1: res += hx/2. * gauss_weights[g] * bfunc1D_1(from.x, to.x, ksi); break;	/// если нагрузка приложена к верхней или нижней кромке (параллельны х), интегрируем одномерную б.ф. X1
@@ -508,11 +523,32 @@ double Rectangle::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
 		//case 3: res += hy / 2. * gauss_weights[g] * bfunc1D_2(from.y, to.y, eta); break;	// Y2
 		//}
 	}
-	return res;
+	return hy/2. * res;
 }
 
-double Quadrilateral::Edge_IntegrateGauss3(Point& from, Point& to, size_t num) {
-	return 1;
+double Quadrilateral::Edge_IntegrateGauss3(size_t num) {
+	double res = 0.0;
+	size_t mu = 0, nu = 0;
+	twoD_to_oneD(num, mu, nu);
+	double ksi = 0.0;
+	// длины нагруженных ребер (прямоугольная трапеция)
+	double hx = this->loc_nodes[1].x - this->loc_nodes[0].x;
+	double hy = this->loc_nodes[3].y - this->loc_nodes[0].y;
+	for (int g = 0; g < 3; g++) {
+		ksi = integrate_points[3*g].y;
+		switch (num) {
+		case 0:
+			res += gauss_weights[g] * bfunc1D(mu, ksi); break;
+		//case 1:
+		//	res += gauss_weights[g] * bfunc1D(mu, ksi); break;
+		//case 2:
+		//	res += gauss_weights[g] * bfunc1D(mu, ksi); break;
+		case 3:
+			res += gauss_weights[g] * bfunc1D(mu, ksi); break;
+		}
+	}
+
+	return hy/2.0 * res;
 }
 
 
@@ -763,20 +799,17 @@ void FEM::AssembleGlobalStiffnessMatrix(Mesh& mesh) {
 		GlobalStiffnessMatrix[i].resize(nodes_count * 2, 0);
 	}
 
-	Element element;
-	element.init();
+
+
 	Element* el;
-	//Rectangle rect;
-	//Quadrilateral quad;
+	etype type;
+
 	// переформатирование глобальной матрицы в поэлементный вид
-	element.loc_nodes[0].x = 1.;
-	Rectangle rect1;
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-		element.loc_nodes = mesh.elements[i_elem].loc_nodes;
-		element.type = mesh.check_element_type(mesh.elements[i_elem]);
-		Rectangle rect;
-		Quadrilateral quad;
-		if (element.type == RECT)
+		type = mesh.check_element_type(mesh.elements[i_elem]);
+		Rectangle rect(mesh.elements[i_elem].loc_nodes);
+		Quadrilateral quad(mesh.elements[i_elem].loc_nodes);
+		if (type == RECT)
 			el = &rect;
 		else
 			el = &quad;
@@ -857,8 +890,8 @@ void Quadrilateral::CalculateLocalLoadVector(Load& P) {
 	block1x2 block;
 
 	for (int i = 0; i < 4; i++) {
-		block.val1 = P.Px * Edge_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i);
-		block.val2 = P.Py * Edge_IntegrateGauss3(loc_nodes[0], loc_nodes[2], i);
+		block.val1 = P.Px * Edge_IntegrateGauss3(i);
+		block.val2 = P.Py * Edge_IntegrateGauss3(i);
 
 		LocalLoadVector_block[i] = block;
 	}
@@ -963,17 +996,17 @@ void FEM::AssembleGlobalLoadVector(Mesh& mesh) {
 
 	// собираем
 	// вектор нагрузки должен считаться только для тех элементов, ребра которых подвержены нагрузке
-	Element element;
 	Element* el;
-	Rectangle rect;
-	Quadrilateral quad;
+	etype type;
 	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
 		Cell current_element = mesh.elements[i_elem];
-		element.type = mesh.check_element_type(current_element);
+		type = mesh.check_element_type(current_element);
+		Rectangle rect(mesh.elements[i_elem].loc_nodes);
+		Quadrilateral quad(mesh.elements[i_elem].loc_nodes);
 		for (int i_node = 0; i_node < loaded_nodes.size(); i_node++) {
 			// если левое ребро элемента нагружено (т. е. его первый или четвертый узел лежат на нагруженной кромке), то он имеет вклад в вектор нагрузок и считаем для него локальный вектор
 			if (current_element.loc_nodes[0].num == loaded_nodes[i_node] || current_element.loc_nodes[3].num == loaded_nodes[i_node]) {
-				if (element.type == RECT)
+				if (type == RECT)
 					el = &rect;
 				else
 					el = &quad;

@@ -27,7 +27,7 @@ public:
 	//											D  = ------	|mu 1	 0	  |
 	//												 1-mu^2 |0  0 (1-mu)/2|
 	Element();
-	void init();
+
 	vector<vector<double>> LocalStiffnessMatrix;
 	vector<vector<block2x2>> LocalStiffnessMatrix_block;
 	virtual void CalculateLocalStiffnessMatrix() {};
@@ -76,7 +76,8 @@ class Rectangle : public Element {
 public:
 	//etype type = RECT;
 	//static void init();
-	Rectangle();
+	//Rectangle();
+	Rectangle(vector<Point>& local_nodes);
 	// Одномерные линейные функции формы
 	// Несмотря на аргументы x0, x1, x, функции также применяются для вычислений функций по Y, так как имеют одинаковый вид
 	double bfunc1D(size_t fucn_num, double x0, double x1, double x) override;
@@ -149,13 +150,14 @@ public:
 	double det_J(double ksi, double eta);
 
 	double Element_IntegrateGauss3(size_t i, size_t j, size_t var1, size_t var2);
-	double Edge_IntegrateGauss3(Point& from, Point& to, size_t num) override;
+	double Edge_IntegrateGauss3(size_t num);
 
 	void CalculateLocalStiffnessMatrix() override;
 	void CalculateLocalLoadVector(Load& P) override;
 
 	Point to_global(Point& p);
-	Quadrilateral();
+	//Quadrilateral();
+	Quadrilateral(vector<Point>& local_nodes);
 	Point integrate_points[9];
 private:
 	double alpha0, alpha1, alpha2;
@@ -203,8 +205,6 @@ public:
 
 class FEM {
 public:
-	Rectangle rect;
-	Quadrilateral quad;
 
 	void AssembleGlobalStiffnessMatrix(Mesh& mesh);
 	vector<vector<double>> GlobalStiffnessMatrix;
