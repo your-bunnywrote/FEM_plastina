@@ -42,6 +42,27 @@ public:
 		return 1;
 	};
 
+	// вычисление деформаций по элементу
+	virtual Point GetElementCentroid() = 0;
+	virtual double GetElementalStrainX(double* u, Point& p) = 0;
+	virtual double GetElementalStrainY(double* u, Point& p) = 0;
+	virtual double GetElementalStrainXY(double* u, Point& p) = 0;
+	
+
+	// узловые деформации
+	//virtual double GetNodalStrainX(double* u, Point& p) = 0;
+	//virtual double GetNodalStrainY(double* u, Point& p) = 0;
+	//virtual double GetNodalStrainXY(double* u, Point& p) = 0;
+
+	virtual double GetElementalStressX(double x_strain, double y_strain) = 0;
+	virtual double GetElementalStressY(double x_strain, double y_strain) = 0;
+	virtual double GetElementalStressXY(double xy_strain) = 0;
+
+	// определение содержания точки внутри элемента
+	bool is_inside(Point& p);
+
+	//Element* GetElement(Point& p);
+
 protected:
 	// получение номера одномерной бф через номер двухмерной
 	void twoD_to_oneD(size_t i, size_t& mu, size_t& nu);
@@ -91,58 +112,56 @@ public:
 	double phi(size_t func_num, Point& from, Point& to, double x, double y);
 
 	// производные двумерных функции форм
-	//double dphi(size_t var, size_t num1, size_t num2, Point& from, Point& to, double x, double y);
-	double dphi(size_t var, size_t num1, size_t num2, Point from, Point to, double x, double y);
+
+	double dphi(size_t var, size_t i, size_t j, Point& from, Point& to, double x, double y);
+
+	Point dphi(size_t num, Point& from, Point& to, Point& p);
 
 
-	//static double gauss_points_local[3];
-	//static Point integrate_points[9];
-	//static double gauss_weights[3];
 	// интегрирование методом Гаусса по элементу
 	double Element_IntegrateGauss3(Point& from, Point& to, size_t num1, size_t num2, size_t var) override;
 	// интегрирование методом Гаусса по ребру
 	double Edge_IntegrateGauss3(Point& from, Point& to, size_t num) override;
 	// вычисление локальной матрицы жесткости для элемента
 	void CalculateLocalStiffnessMatrix() override;
-	// vector<int> fixed_nodes;
-	// vector<int> loaded_nodes;
-	// сюда будем вносить блоки, так как матрица жесткости имеет блочную структуру
-	//vector<vector<block2x2>> LocalStiffnessMatrix_block;
-	//vector<vector<block2x2>> GlobalStiffnessMatrix_block;
-	// поэлементные форматы матрицы жесткости
-	//vector<vector<double>> LocalStiffnessMatrix;
-	//vector<vector<double>> GlobalStiffnessMatrix;
-	// сборка глобальной матрицы жесткости
-	// void Assemble_GlobalStiffnessMatrix(Mesh& mesh);
+
 	
 	// вычисление локального вектора нагрузок
 	void CalculateLocalLoadVector( Load& P) override;
-	// vector<block1x2> LocalLoadVector_block;
-	// vector<block1x2> GlobalLoadVector_block;
 
-	// поэлементные форматы векторов нагрузок
-	//vector<double> LocalLoadVector;
-	//vector<double> GlobalLoadVector;
 
-	//void Assemble_GlobalLoadVector(Mesh& mesh);
+	Point GetElementCentroid() override;
+	double GetElementalStrainX(double* u, Point& p) override;
+	double GetElementalStrainY(double* u, Point& p) override;
+	double GetElementalStrainXY(double* u, Point& p) override;
 
-	// конвертирование матрицы в разреженный формат для использования в PARDISO
-	
-	//void GeneratePortrait(Portrait & Matrix, vector<vector<double>> GSM, int &ja_sz);
+
+	double GetElementalStressX(double x_strain, double y_strain) override;
+	double GetElementalStressY(double x_strain, double y_strain) override;
+	double GetElementalStressXY(double xy_strain) override;
+
+
 	Point integrate_points[9];
 };
 
 class Quadrilateral : public Element {
 public:
+	Quadrilateral(vector<Point>& local_nodes);
+	Point integrate_points[9];
 	//etype type = QUAD;
 	// одномерные базисные функции в шаблонных координатах
 	double bfunc1D(size_t fucn_num, double ksi) override;
 	// производные одномерных бф в шаблонных координатах
 	double dbfunc1D(size_t func_num, double ksi) override;
 
+	// двумрная бф в шаблонных координатах
 	double phi(size_t func_num, double ksi, double eta);
 
+	// производные двумерных бф в шаблонных координатах
 	Point dphi(size_t func_num, double ksi, double eta);
+
+	// производные двумерных бф в глобальных координатах
+	Point dphi_global(size_t func_num, Point& p);
 
 	double grad_bfunc_2d(size_t var, size_t num, double ksi, double eta);
 
@@ -155,10 +174,21 @@ public:
 	void CalculateLocalStiffnessMatrix() override;
 	void CalculateLocalLoadVector(Load& P) override;
 
+	// перевод шаблонных координат [0,1] в глобальные
 	Point to_global(Point& p);
-	//Quadrilateral();
-	Quadrilateral(vector<Point>& local_nodes);
-	Point integrate_points[9];
+	// перевод глобальных координат в шаблонные [0,1]
+	Point to_local(Point& p);
+
+	Point GetElementCentroid() override;
+	double GetElementalStrainX(double* u, Point& p) override;
+	double GetElementalStrainY(double* u, Point& p) override;
+	double GetElementalStrainXY(double* u, Point& p) override;
+
+	double GetElementalStressX(double x_strain, double y_strain) override;
+	double GetElementalStressY(double x_strain, double y_strain) override;
+	double GetElementalStressXY(double xy_strain) override;
+
+
 private:
 	double alpha0, alpha1, alpha2;
 	double beta1, beta2, beta3, beta4, beta5, beta6;
@@ -218,6 +248,13 @@ public:
 	vector<int> fixed_nodes;
 
 	void GeneratePortrait(Portrait& portrait, vector<vector<double>> GSM, int &ig_n_1);
+
+	vector<double> nodal_stressX;
+	vector<double> elemental_stressX;
+
+	Element* GetElement(Point& p, Mesh& mesh);
+
+	void Get_X_Stresses(double* u, Mesh& mesh);
 
 private:
 

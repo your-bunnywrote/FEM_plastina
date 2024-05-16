@@ -130,6 +130,24 @@ Element::Element() {
 	gauss_weights[2] = 5. / 9.;
 }
 
+bool Element::is_inside(Point& p) {
+	double eps = 1e-10;
+	//площадь четырехугольника через площадь двух треугольников
+	double S1 = 0.5 * fabs((loc_nodes[0].x - loc_nodes[3].x) * (loc_nodes[1].y - loc_nodes[3].y) - (loc_nodes[1].x - loc_nodes[3].x) * (loc_nodes[0].y - loc_nodes[3].y));
+	double S2 = 0.5 * fabs((loc_nodes[1].x - loc_nodes[2].x) * (loc_nodes[3].y - loc_nodes[2].y) - (loc_nodes[3].x - loc_nodes[2].x) * (loc_nodes[1].y - loc_nodes[2].y));
+	double S = S1 + S2;
+	// для определения попадания точки в элемент он представляется как четыре треугольника
+	double S1_tri = 0.5 * fabs((loc_nodes[0].x - p.x) * (loc_nodes[1].y - p.y) - (loc_nodes[1].x - p.x) * (loc_nodes[0].y - p.y));
+	double S2_tri = 0.5 * fabs((loc_nodes[0].x - p.x) * (loc_nodes[3].y - p.y) - (loc_nodes[3].x - p.x) * (loc_nodes[0].y - p.y));
+	double S3_tri = 0.5 * fabs((loc_nodes[1].x - p.x) * (loc_nodes[2].y - p.y) - (loc_nodes[2].x - p.x) * (loc_nodes[1].y - p.y));
+	double S4_tri = 0.5 * fabs((loc_nodes[2].x - p.x) * (loc_nodes[3].y - p.y) - (loc_nodes[3].x - p.x) * (loc_nodes[2].y - p.y));
+
+	if (fabs(S - S1_tri - S2_tri - S3_tri - S4_tri) < eps)
+		return true;
+	return false;
+}
+
+
 
 
 Rectangle::Rectangle(vector<Point>& local_nodes) {
@@ -192,7 +210,7 @@ double Rectangle::phi(size_t func_num, Point& from, Point& to, double x, double 
 }
 
 // dphi
-double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, double x, double y) {
+double Rectangle::dphi(size_t var, size_t i, size_t j, Point& from, Point& to, double x, double y) {
 	size_t mu1 = 0, nu1 = 0;
 	size_t mu2 = 0, nu2 = 0;
 	twoD_to_oneD(i, mu1, nu1);
@@ -213,6 +231,18 @@ double Rectangle::dphi(size_t var, size_t i, size_t j, Point from, Point to, dou
 
 }
 
+Point Rectangle::dphi(size_t num, Point& from, Point& to, Point& p) {
+	size_t mu = 0, nu = 0;
+	twoD_to_oneD(num, mu, nu);
+
+	double X_mu = bfunc1D(mu, from.x,to.x,p.x);
+	double dX_mu = dbfunc1D(mu, from.x,to.x,p.x);
+	double Y_nu = bfunc1D(nu, from.y,to.y,p.y);
+	double dY_nu = dbfunc1D(nu, from.y, to.y, p.y);
+
+	return Point(dX_mu * Y_nu, X_mu * dY_nu);
+
+}
 
 
 Quadrilateral::Quadrilateral(vector<Point>& local_nodes) {
@@ -282,6 +312,105 @@ Point Quadrilateral::to_global(Point& p) {
 	double y = (1 - p.x) * (1 - p.y) * loc_nodes[0].y + p.x * (1 - p.y) * loc_nodes[1].y + p.x * p.y * loc_nodes[2].y + (1 - p.x) * p.y * loc_nodes[3].y;
 	return Point(x, y);
 }
+
+Point Quadrilateral::to_local(Point& p) {
+	// [1], стр. 305
+
+	double w = beta6 * (p.x - loc_nodes[0].x) - beta5 * (p.y - loc_nodes[0].y);
+
+	double ksi = 0.0;
+	double eta = 0.0;
+
+	double eps = 1e-10;
+
+	if (fabs(alpha1) < eps && fabs(alpha2) < eps) {
+		ksi = (beta3 * (p.x -loc_nodes[0].x) - beta1 * (p.y - loc_nodes[0].y)) / (beta2 * beta3 - beta1 * beta4);
+		eta = (beta2 * (p.y -loc_nodes[0].y) - beta4 * (p.x - loc_nodes[0].x)) / (beta2 * beta3 - beta1 * beta4);
+	}
+	else {
+		if (fabs(alpha1) < eps) {
+			ksi = (alpha2 * (p.x - loc_nodes[0].x) + beta1 * w) / (alpha2 * beta2 - beta5 * w);
+			eta = -w / alpha2;
+		}
+		else {
+			if (fabs(alpha2) < eps) {
+				ksi = w / alpha1;
+				eta = (alpha1 * (p.y - loc_nodes[0].y) - beta4 * w) / (alpha1 * beta3 + beta6 * w);
+			}
+			else {
+				double a = beta5 * alpha2;
+				double b = alpha2 * beta2 + alpha1 * beta1 + beta5 * w;
+				double c = alpha1 * (loc_nodes[0].x - p.x) + beta2 * w;
+				double D = b * b - 4.0 * a * c;
+				double eta1 = (-b - sqrt(D)) / (2.0 * a);
+				double eta2 = (-b + sqrt(D)) / (2.0 * a);
+				double ksi1 = alpha2 / alpha1 * eta1 + w / alpha1;
+				double ksi2 = alpha2 / alpha1 * eta2 + w / alpha1;
+				if (eta1 + eps >= 0.0 && eta1 - eps <= 1.0 && ksi1 + eps >= 0.0 && ksi1 - eps <= 1.0) {
+					ksi = ksi1;
+					eta = eta1;
+				}
+				else {
+					if (eta2 + eps >= 0.0 && eta2 - eps <= 1.0 && ksi2 + eps >= 0.0 && ksi2 - eps <= 1.0) {
+						ksi = ksi2;
+						eta = eta2;
+					}
+					else
+					{
+
+						// могут быть случаи, когда значения бф лежат вне шаблонного интервала [0,1]
+						// в таком случае обычное сравнение не будет работать,
+						// поэтому вводится функция штрафа, которая является квадратом расстояния отклонения бф от ожидаемого значения
+						// затем выбирается функция с минимальным штрафом
+
+						double penalty1 = 0.0;
+						if (eta1 + eps < 0.0)
+							penalty1 += eta1 * eta1;
+						if (ksi1 + eps < 0.0)
+							penalty1 += ksi1 * ksi1;
+						if (eta1 - eps > 1.0)
+							penalty1 += (eta1 - 1.0) * (eta1 - 1.0);
+						if (ksi1 - eps > 1.0)
+							penalty1 += (ksi1 - 1.0) * (ksi1 - 1.0);
+
+						double penalty2 = 0.0;
+						if (eta2 + eps < 0.0)
+							penalty2 += eta2 * eta2;
+						if (ksi2 + eps < 0.0)
+							penalty2 += ksi2 * ksi2;
+						if (eta2 - eps > 1.0)
+							penalty2 += (eta2 - 1.0) * (eta2 - 1.0);
+						if (ksi2 - eps > 1.0)
+							penalty2 += (ksi2 - 1.0) * (ksi2 - 1.0);
+
+						if (penalty1 < penalty2)
+						{
+							cerr << "Warning: Target point is outside of element, penalty = " << penalty1 << endl;
+							ksi = ksi1;
+							eta = eta1;
+						}
+						else
+						{
+							cerr << "Warning: Target point is outside of element, penalty = " << penalty2 << endl;
+							ksi = ksi2;
+							eta = eta2;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return Point(ksi, eta);
+}
+
+Point Quadrilateral::dphi_global(size_t num, Point& p) {
+	Point local_point = to_local(p);
+	double ksi = local_point.x;
+	double eta = local_point.y;
+	return dphi(num, ksi, eta);
+}
+
 
 double Quadrilateral::det_J(double ksi, double eta) {
 	double J = alpha0 + alpha1 * ksi + alpha2 * eta;
@@ -555,7 +684,6 @@ double Quadrilateral::Edge_IntegrateGauss3(size_t num) {
 // сюда будет поступать элемент из ранее созданного списка элементов
 // интегрирование для определения коэффициентов K для каждого узла будет проводиться непосредственно в этой функции
 void Quadrilateral::CalculateLocalStiffnessMatrix() {
-	cout << "Calculate local stiffness matrix for Quad\n";
 	block2x2 block;
 	double Kx,	// для нее будем считать интеграл от базисных функций на каждом шаге цикла
 		Ky,
@@ -601,7 +729,6 @@ void Quadrilateral::CalculateLocalStiffnessMatrix() {
 }
 
 void Rectangle::CalculateLocalStiffnessMatrix() {
-	cout << "Calculate local stiffness matrix for Rectangle\n";
 	block2x2 block;
 	double Kx,	// для нее будем считать интеграл от базисных функций на каждом шаге цикла
 		Ky,
@@ -647,140 +774,6 @@ void Rectangle::CalculateLocalStiffnessMatrix() {
 }
 
 
-
-
-
-
-//void Rectangle::Assemble_GlobalStiffnessMatrix(Mesh& mesh) {
-//
-//	cout << "Assembling Global Stiffness Matrix...\n";
-//
-//	int nodes_count = mesh.nodes.size();
-//	block2x2 block;
-//	// глобальная матрица жесткости имеет размерность NxN, где N = количество_степеней_свободы_узла(2) * количество_узлов
-//	// если в блочном формате, то K*K, где K = количество_узлов, так как в каждом блоке лежит еще 4 значения (2 столбца, 2 строки)
-//	// так как Локальная и Глобальная матрицы жесткости состоят из блоков, память выделяем для блоков
-//	GlobalStiffnessMatrix_block.resize(nodes_count);
-//	for (int k = 0; k < nodes_count; k++) {
-//		GlobalStiffnessMatrix_block[k].resize(nodes_count);
-//	}
-//
-//	// собираем
-//	//for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-//	//	Element current_element = mesh.elements[i_elem];
-//	//	//if ((current_element.loc_nodes[0].y == current_element.loc_nodes[1].y)
-//	//	//	&& (current_element.loc_nodes[0].x == current_element.loc_nodes[3].x)
-//	//	//	&& (current_element.loc_nodes[1].x == current_element.loc_nodes[2].x)
-//	//	//	&& (current_element.loc_nodes[2].y == current_element.loc_nodes[3].y))
-//	//	//	current_element.type = RECTANGLE;
-//	//	//else
-//	//	//	current_element.type = QUADR;
-//	//	Calculate_LocalStiffnessMatrix(current_element);
-//	//	for (int i = 0; i < 4; i++) {
-//	//		for (int j = 0; j < 4; j++) {
-//	//			GlobalStiffnessMatrix_block[current_element.loc_nodes[i].num - 1][current_element.loc_nodes[j].num - 1] += LocalStiffnessMatrix_block[i][j];
-//	//		}
-//	//	}
-//	//}
-//
-//
-//	// выделяем память под матрицу
-//	GlobalStiffnessMatrix.resize(nodes_count * 2);
-//	for (int i = 0; i < nodes_count * 2; i++) {
-//		GlobalStiffnessMatrix[i].resize(nodes_count * 2, 0);
-//	}
-//
-//
-//	// переформатирование глобальной матрицы в поэлементный вид
-//	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-//
-//
-//
-//		Element current_element = mesh.elements[i_elem];
-//		Calculate_LocalStiffnessMatrix(current_element);
-//		for (int i = 0; i < 4; i++) {
-//			for (int j = 0; j < 4; j++) {
-//				int i_1 = current_element.loc_nodes[i].num - 1,
-//					j_1 = current_element.loc_nodes[j].num - 1;
-//				GlobalStiffnessMatrix[2 * i_1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val11;
-//				GlobalStiffnessMatrix[2 * i_1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val12;
-//				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1] += LocalStiffnessMatrix_block[i][j].val21;
-//				GlobalStiffnessMatrix[2 * i_1 + 1][2 * j_1 + 1] += LocalStiffnessMatrix_block[i][j].val22;
-//			}
-//		}
-//	}
-//
-//
-//	
-//
-//
-//	// =========== Создание списка закрепленных узлов ==============
-//	// массив с закрепленными узлами можно сформировать, основываясь на совпадении координат узлов с координатами закрепленной кромки (данные берем из информации о расчетной области)
-//
-//	comp_domain domain = mesh.subdomain;
-//	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-//		//if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
-//		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x)		// здесь сравниваем координату узла с кривой
-//			fixed_nodes.push_back(mesh.nodes[i].num);					// coords[0].x - координата левой кромки пластины
-//																		// coords[1].x - координата отверстия пластины
-//																		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
-//	}
-//
-//	// =========== Создание списка нагруженных узлов ==============
-//
-//	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-//		//if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
-//		if(mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x)	// сравниваем координату узла с кривой
-//			loaded_nodes.push_back(mesh.nodes[i].num);
-//	}
-//
-//
-//
-//	for(int k = 0; k < fixed_nodes.size();k++) {		// !!!!! k от 0 до размер_массива_закрепленных_узлов
-//		for (int i = 0; i < GlobalStiffnessMatrix_block.size(); i++) {
-//			if (i == (fixed_nodes[k] - 1)) {	// если номер строки совпадает с номером закрепляемого узла
-//				for (int j = 0; j < GlobalStiffnessMatrix_block.size(); j++) {
-//					GlobalStiffnessMatrix_block[i][j] = 0;		// зануляем соответствующую строку
-//					GlobalStiffnessMatrix_block[j][i] = 0;		// зануляем соответствующий столбец
-//					GlobalStiffnessMatrix_block[i][i].val11 = 1;		// ставим на диагональ 1
-//					GlobalStiffnessMatrix_block[i][i].val22 = 1;
-//				}
-//			}
-//		}
-//	}
-//
-//	// применение условий закрепления к поэлементно собранной матрице
-//	for (int k = 0; k < fixed_nodes.size(); k++) {
-//		for (int i = 0; i < GlobalStiffnessMatrix.size()/2; i++) {
-//			if (i == (fixed_nodes[k] - 1)) {	// если номер строки совпадает с номером закрепленного узла
-//				for (int j = 0; j < GlobalStiffnessMatrix.size()/2; j++) {
-//					GlobalStiffnessMatrix[2 * i][2 * j] = 0;		// зануляем соответствующую строку
-//					GlobalStiffnessMatrix[2 * i][2 * j +1] = 0;		// зануляем соответствующую строку
-//					GlobalStiffnessMatrix[2 * i + 1][2 * j] = 0;		// зануляем соответствующую строку
-//					GlobalStiffnessMatrix[2 * i + 1][2 * j + 1] = 0;		// зануляем соответствующую строку
-//
-//
-//					GlobalStiffnessMatrix[2 * j][2 * i] = 0;		// зануляем соответствующий столбец
-//					GlobalStiffnessMatrix[2 * j][2 * i +1] = 0;		// зануляем соответствующий столбец
-//					GlobalStiffnessMatrix[2 * j + 1][2 * i] = 0;		// зануляем соответствующий столбец
-//					GlobalStiffnessMatrix[2 * j + 1][2 * i + 1] = 0;		// зануляем соответствующий столбец
-//
-//					GlobalStiffnessMatrix[2 * i][2 * i] = 1;		// ставим на диагональ 1
-//					//GlobalStiffnessMatrix[2 * i][2 * i +1] = 1;		// ставим на диагональ 1
-//					//GlobalStiffnessMatrix[2 * i + 1][2 * i] = 1;		// ставим на диагональ 1
-//					GlobalStiffnessMatrix[2 * i + 1][2 * i + 1] = 1;		// ставим на диагональ 1
-//				}
-//			}
-//		}
-//	}
-//
-//
-//
-//
-//
-//
-//	cout << "Assembling Global Stiffness Matrix complete\n";
-//}
 
 void FEM::AssembleGlobalStiffnessMatrix(Mesh& mesh) {
 
@@ -1100,3 +1093,200 @@ void FEM::GeneratePortrait(Portrait& portrait,vector<vector<double>> GSM, int &j
 	//	outfile << portrait.ggl[i] << endl;
 	//outfile.close();
 }
+
+Element* FEM::GetElement(Point& p, Mesh& mesh) {
+	Element* el;
+	etype type;
+	for (int i = 0; i < mesh.elements.size(); i++) {
+		type = mesh.check_element_type(mesh.elements[i]);
+		if (type == RECT) {
+			//Rectangle rect(mesh.elements[i].loc_nodes);
+			el = new Rectangle(mesh.elements[i].loc_nodes);
+			if (el->is_inside(p))
+				return el;
+		}
+		else {
+			el = new Quadrilateral(mesh.elements[i].loc_nodes);
+			if (el->is_inside(p))
+				return el;
+		}
+	}
+	cerr << "Warning: Target point " << p.num << "(" << p.x << ", " << p.y << ")" << " is outside of area\n";
+	return NULL;
+}
+
+
+Point Rectangle::GetElementCentroid() {
+	double x_center = loc_nodes[0].x + (loc_nodes[1].x - loc_nodes[0].x) / 2.;
+	double y_center = loc_nodes[0].y + (loc_nodes[3].y - loc_nodes[0].y) / 2.;
+	return Point(x_center, y_center);
+}
+
+double Rectangle::GetElementalStrainX(double* u, Point& p) {
+	double x_strain = 0.0;
+	int ux_index = 0;
+	for (int i = 0; i < loc_nodes.size(); i++) {
+		// x-компонента перемещений узла
+		ux_index = loc_nodes[i].num * 2 - 1 - 1;
+		double ux_nodal = u[ux_index];
+		// значение производной i-й базисной функции должно быть в любой точке элемента, а не в i-м его узле
+		x_strain += ux_nodal * dphi(i, loc_nodes[0], loc_nodes[2], p).x;
+	}
+
+	return x_strain;
+}
+
+double Rectangle::GetElementalStrainY(double* u, Point& p) {
+	double y_strain = 0.0;
+	int uy_index = 0;
+	for (int i = 0; i < loc_nodes.size(); i++) {
+		// x-компонента перемещений узла
+		uy_index = loc_nodes[i].num * 2 - 1;
+		double uy_nodal = u[uy_index];
+		y_strain += uy_nodal * dphi(i, loc_nodes[0], loc_nodes[2], p).y;
+	}
+
+	return y_strain;
+}
+
+double Rectangle::GetElementalStrainXY(double* u, Point& p) {
+	double xy_strain = 0.0;
+	int ux_index = 0;
+	int uy_index = 0;
+	for (int i = 0; i < loc_nodes.size(); i++) {
+		// x-компонента перемещений узла
+		ux_index = loc_nodes[i].num * 2 - 1 - 1;
+		uy_index = loc_nodes[i].num * 2 - 1;
+		double ux_nodal = u[ux_index];
+		double uy_nodal = u[uy_index];
+		xy_strain += ux_nodal * dphi(i, loc_nodes[0], loc_nodes[2], p).y + uy_nodal * dphi(i, loc_nodes[0], loc_nodes[2], p).x;
+	}
+
+	return xy_strain;
+}
+
+double Rectangle::GetElementalStressX(double x_strain, double y_strain) {
+	return D[0][0] * x_strain + D[0][1] * y_strain;
+}
+
+double Rectangle::GetElementalStressY(double x_strain, double y_strain) {
+	return D[1][0] * x_strain + D[1][1] * y_strain;
+}
+
+double Rectangle::GetElementalStressXY(double xy_strain) {
+	return D[2][2] * xy_strain;
+}
+
+Point Quadrilateral::GetElementCentroid() {
+	// для проверки
+	double x_center = loc_nodes[0].x + (loc_nodes[1].x - loc_nodes[0].x) / 2.;
+	double y_center = loc_nodes[0].y + (loc_nodes[3].y - loc_nodes[0].y) / 2.;
+
+
+	return Point(x_center, y_center);
+}
+
+double Quadrilateral::GetElementalStrainX(double* u, Point& p) {
+	double x_strain = 0.0;
+	int ux_index = 0;
+	for (int i = 0; i < loc_nodes.size(); i++) {
+		ux_index = loc_nodes[i].num * 2 - 1 - 1;
+		double ux_nodal = u[ux_index];
+
+		x_strain += ux_nodal * dphi_global(i, p).x;
+	}
+	return x_strain;
+}
+
+double Quadrilateral::GetElementalStrainY(double* u, Point& p) {
+	double y_strain = 0.0;
+	int uy_index = 0;
+	for (int i = 0; i < loc_nodes.size(); i++) {
+		uy_index = loc_nodes[i].num * 2 - 1;
+		double uy_nodal = u[uy_index];
+		y_strain += uy_nodal * dphi_global(i, p).y;
+	}
+	return y_strain;
+}
+
+double Quadrilateral::GetElementalStrainXY(double* u, Point& p) {
+	double xy_strain = 0.0;
+	int ux_index = 0;
+	int uy_index = 0;
+	for (int i = 0; i < loc_nodes.size(); i++) {
+		ux_index = loc_nodes[i].num * 2 - 1 - 1;
+		uy_index = loc_nodes[i].num * 2 - 1;
+		double ux_nodal = u[ux_index];
+		double uy_nodal = u[uy_index];
+		xy_strain += ux_nodal * dphi_global(i, p).y + uy_nodal * dphi_global(i, p).x;
+	}
+	return xy_strain;
+}
+
+double Quadrilateral::GetElementalStressX(double x_strain, double y_strain) {
+	return D[0][0] * x_strain + D[0][1] * y_strain;
+}
+
+double Quadrilateral::GetElementalStressY(double x_strain, double y_strain) {
+	return D[1][0] * x_strain + D[1][1] * y_strain;
+}
+
+double Quadrilateral::GetElementalStressXY(double xy_strain) {
+	return D[2][2] * xy_strain;
+}
+
+
+
+
+void FEM::Get_X_Stresses(double* u, Mesh& mesh) {
+	cout << "\nObtaining elemental X normal stress...\n";
+
+	Element* el;
+	etype type;
+	Point element_centroid;
+	double x_strain = 0.0,
+		y_strain = 0.0;
+	elemental_stressX.resize(mesh.elements.size());
+	nodal_stressX.resize(mesh.elements.size());
+	// считаем осредненные напряжения в центрах элементов
+	for (int i = 0; i < mesh.elements.size(); i++) {
+		type = mesh.check_element_type(mesh.elements[i]);
+
+		if (type == RECT) {
+			el = new Rectangle(mesh.elements[i].loc_nodes);
+			element_centroid = el->GetElementCentroid();
+		}
+		else {
+			el = new Quadrilateral(mesh.elements[i].loc_nodes);
+			element_centroid = el->GetElementCentroid();
+		}
+		
+		x_strain = el->GetElementalStrainX(u, element_centroid);
+		y_strain = el->GetElementalStrainY(u, element_centroid);
+		elemental_stressX[i] = el->GetElementalStressX(x_strain, y_strain);
+
+
+
+
+
+
+
+		delete el;
+	}
+
+
+	//for (int i = 0; i < mesh.nodes.size(); i++) {
+	//	el = GetElement(mesh.nodes[i], mesh);
+	//	x_strain = el->GetElementalStrainX(u, mesh.nodes[i]);
+	//	y_strain = el->GetElementalStrainY(u, mesh.nodes[i]);
+	//	nodal_stressX[i] = el->GetElementalStressX(x_strain, y_strain);
+
+	//	delete el;
+	//}
+
+
+
+
+	
+}
+
