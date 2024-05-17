@@ -13,7 +13,7 @@ Material::Material() {
 }
 
 Load::Load() {
-	Px = -1000;							// нагрузка, которую прикладываем к линии, [Н/мм]
+	Px = -3;							// нагрузка, которую прикладываем к линии, [Н/мм]
 	Py = 0.0;
 }
 
@@ -247,8 +247,8 @@ Point Rectangle::dphi(size_t num, Point& from, Point& to, Point& p) {
 
 Quadrilateral::Quadrilateral(vector<Point>& local_nodes) {
 	this->loc_nodes = local_nodes;
-	alpha0 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[1].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[3].x - loc_nodes[0].x);
-	alpha1 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[2].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[3].x);
+	alpha0 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[3].y - loc_nodes[0].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[3].x - loc_nodes[0].x);
+	alpha1 = (loc_nodes[1].x - loc_nodes[0].x) * (loc_nodes[2].y - loc_nodes[3].y) - (loc_nodes[1].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[3].x);
 	alpha2 = (loc_nodes[3].y - loc_nodes[0].y) * (loc_nodes[2].x - loc_nodes[1].x) - (loc_nodes[3].x - loc_nodes[0].x) * (loc_nodes[2].y - loc_nodes[1].y);
 	beta1 = loc_nodes[3].x - loc_nodes[0].x;
 	beta2 = loc_nodes[1].x - loc_nodes[0].x;
@@ -324,18 +324,18 @@ Point Quadrilateral::to_local(Point& p) {
 	double eps = 1e-10;
 
 	if (fabs(alpha1) < eps && fabs(alpha2) < eps) {
-		ksi = (beta3 * (p.x -loc_nodes[0].x) - beta1 * (p.y - loc_nodes[0].y)) / (beta2 * beta3 - beta1 * beta4);
-		eta = (beta2 * (p.y -loc_nodes[0].y) - beta4 * (p.x - loc_nodes[0].x)) / (beta2 * beta3 - beta1 * beta4);
+		ksi = ((beta3 * (p.x -loc_nodes[0].x) - beta1 * (p.y - loc_nodes[0].y)) / (beta2 * beta3 - beta1 * beta4));
+		eta = ((beta2 * (p.y -loc_nodes[0].y) - beta4 * (p.x - loc_nodes[0].x)) / (beta2 * beta3 - beta1 * beta4));
 	}
 	else {
 		if (fabs(alpha1) < eps) {
-			ksi = (alpha2 * (p.x - loc_nodes[0].x) + beta1 * w) / (alpha2 * beta2 - beta5 * w);
-			eta = -w / alpha2;
+			ksi = ((alpha2 * (p.x - loc_nodes[0].x) + beta1 * w) / (alpha2 * beta2 - beta5 * w));
+			eta = (- w / alpha2);
 		}
 		else {
 			if (fabs(alpha2) < eps) {
-				ksi = w / alpha1;
-				eta = (alpha1 * (p.y - loc_nodes[0].y) - beta4 * w) / (alpha1 * beta3 + beta6 * w);
+				ksi = (w / alpha1);
+				eta = ((alpha1 * (p.y - loc_nodes[0].y) - beta4 * w) / (alpha1 * beta3 + beta6 * w));
 			}
 			else {
 				double a = beta5 * alpha2;
@@ -344,8 +344,8 @@ Point Quadrilateral::to_local(Point& p) {
 				double D = b * b - 4.0 * a * c;
 				double eta1 = (-b - sqrt(D)) / (2.0 * a);
 				double eta2 = (-b + sqrt(D)) / (2.0 * a);
-				double ksi1 = alpha2 / alpha1 * eta1 + w / alpha1;
-				double ksi2 = alpha2 / alpha1 * eta2 + w / alpha1;
+				double ksi1 = (alpha2 / alpha1 * eta1 + w / alpha1);
+				double ksi2 = (alpha2 / alpha1 * eta2 + w / alpha1);
 				if (eta1 + eps >= 0.0 && eta1 - eps <= 1.0 && ksi1 + eps >= 0.0 && ksi1 - eps <= 1.0) {
 					ksi = ksi1;
 					eta = eta1;
@@ -1189,6 +1189,7 @@ Point Quadrilateral::GetElementCentroid() {
 double Quadrilateral::GetElementalStrainX(double* u, Point& p) {
 	double x_strain = 0.0;
 	int ux_index = 0;
+	//Point local_point = to_local(p);
 	for (int i = 0; i < loc_nodes.size(); i++) {
 		ux_index = loc_nodes[i].num * 2 - 1 - 1;
 		double ux_nodal = u[ux_index];
@@ -1238,7 +1239,7 @@ double Quadrilateral::GetElementalStressXY(double xy_strain) {
 
 
 
-void FEM::Get_X_Stresses(double* u, Mesh& mesh) {
+void FEM::Get_X_Stresses(double* u, Mesh& mesh, string output_folder) {
 	cout << "\nObtaining elemental X normal stress...\n";
 
 	Element* el;
@@ -1246,12 +1247,20 @@ void FEM::Get_X_Stresses(double* u, Mesh& mesh) {
 	Point element_centroid;
 	double x_strain = 0.0,
 		y_strain = 0.0;
+	double xy_strain = 0.0;
 	elemental_stressX.resize(mesh.elements.size());
-	nodal_stressX.resize(mesh.elements.size());
+	elemental_stressY.resize(mesh.elements.size());
+	elemental_stressXY.resize(mesh.elements.size());
+	Elemental_VonMises_Stress.resize(mesh.elements.size());
+	ofstream out_x_stress, out_y_stress, out_vonMises_stress;
+
+	out_x_stress.open(output_folder + "\\x_normal_stress.txt");
+	out_y_stress.open(output_folder + "\\y_normal_stress.txt");
+	out_vonMises_stress.open(output_folder + "\\VonMises_stress.txt");
 	// считаем осредненные напряжения в центрах элементов
 	for (int i = 0; i < mesh.elements.size(); i++) {
 		type = mesh.check_element_type(mesh.elements[i]);
-
+		int elnum = mesh.elements[i].num;
 		if (type == RECT) {
 			el = new Rectangle(mesh.elements[i].loc_nodes);
 			element_centroid = el->GetElementCentroid();
@@ -1260,19 +1269,36 @@ void FEM::Get_X_Stresses(double* u, Mesh& mesh) {
 			el = new Quadrilateral(mesh.elements[i].loc_nodes);
 			element_centroid = el->GetElementCentroid();
 		}
-		
+
 		x_strain = el->GetElementalStrainX(u, element_centroid);
 		y_strain = el->GetElementalStrainY(u, element_centroid);
+		xy_strain = el->GetElementalStrainXY(u, element_centroid);
 		elemental_stressX[i] = el->GetElementalStressX(x_strain, y_strain);
+		elemental_stressY[i] = el->GetElementalStressY(x_strain, y_strain);
+		elemental_stressXY[i] = el->GetElementalStressXY(xy_strain);
+		// для вычисления эквивалентных напряжений в элементе
+		double sigmax = elemental_stressX[i];
+		double sigmay = elemental_stressY[i];
+		double tauxy = elemental_stressXY[i];
+		// главные напряжения в элементе
+		double sigma_1 = (sigmax + sigmay) / 2. + sqrt((sigmax - sigmay) * (sigmax - sigmay) / 4. + tauxy * tauxy);
+		double sigma_2 = (sigmax + sigmay) / 2. - sqrt((sigmax - sigmay) * (sigmax - sigmay) / 4. + tauxy * tauxy);
+		Elemental_VonMises_Stress[i] = sqrt(((sigma_1 - sigma_2) * (sigma_1 - sigma_2) + sigma_2 * sigma_2 + sigma_1 * sigma_1) / 2.);
 
-
-
-
-
+		out_x_stress << elnum << "\t" << sigmax << endl;
+		out_y_stress << elnum << "\t" << sigmay << endl;
+		out_vonMises_stress << elnum << "\t" << Elemental_VonMises_Stress[i] << endl;
 
 
 		delete el;
 	}
+
+	out_x_stress.close();
+	out_y_stress.close();
+	out_vonMises_stress.close();
+
+
+}
 
 
 	//for (int i = 0; i < mesh.nodes.size(); i++) {
@@ -1286,7 +1312,4 @@ void FEM::Get_X_Stresses(double* u, Mesh& mesh) {
 
 
 
-
-	
-}
 

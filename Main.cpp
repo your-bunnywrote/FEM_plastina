@@ -320,7 +320,7 @@ int main() {
 
 	cout << "\n Solution is done!\n";
 
-	fem.Get_X_Stresses(x, mesh);
+	fem.Get_X_Stresses(x, mesh, output_folder);
 
 	delete[] b;
 	delete[] x;

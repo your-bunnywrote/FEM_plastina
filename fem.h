@@ -249,12 +249,18 @@ public:
 
 	void GeneratePortrait(Portrait& portrait, vector<vector<double>> GSM, int &ig_n_1);
 
-	vector<double> nodal_stressX;
+
 	vector<double> elemental_stressX;
+	vector<double> elemental_stressY;
+	vector<double> elemental_stressXY;
+	vector<double> Elemental_VonMises_Stress;
 
 	Element* GetElement(Point& p, Mesh& mesh);
 
-	void Get_X_Stresses(double* u, Mesh& mesh);
+	void Get_X_Stresses(double* u, Mesh& mesh, string output_folder);
+
+
+
 
 private:
 
