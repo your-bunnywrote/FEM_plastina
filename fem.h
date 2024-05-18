@@ -245,7 +245,7 @@ public:
 	vector<block1x2> GlobalLoadVector_block;
 
 	vector<int> loaded_nodes;
-	vector<int> fixed_nodes;
+	vector<Point> fixed_nodes;
 
 	void GeneratePortrait(Portrait& portrait, vector<vector<double>> GSM, int &ig_n_1);
 
