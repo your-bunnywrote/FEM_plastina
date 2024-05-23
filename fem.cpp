@@ -934,63 +934,6 @@ void Rectangle::CalculateLocalLoadVector(Load& P) {
 }
 
 
-//void Rectangle::Assemble_GlobalLoadVector(Mesh& mesh) {
-//	cout << "\nAssembling Global Load Vector...\n";
-//	int nodes_count = mesh.nodes.size();
-//	Load P;
-//	//P.GetLineLength(mesh);
-//	block1x2 block;
-//	// размер вектора нагрузок - 1хN, где N = количество_степеней_свободы_узла(2) * количество_узлов
-//	// в блочном формате - 1xK, где K = количество_узлов
-//	GlobalLoadVector_block.resize(nodes_count);
-//
-//	// собираем
-//	// вектор нагрузки должен считаться только для тех элементов, ребра которых подвержены нагрузке
-//	for (int i_elem = 0; i_elem < mesh.elements.size(); i_elem++) {
-//		Element current_element = mesh.elements[i_elem];
-//		for (int i_node = 0; i_node < loaded_nodes.size(); i_node++) {
-//			// если левое ребро элемента нагружено (т. е. его первый или четвертый узел лежат на нагруженной кромке), то он имеет вклад в вектор нагрузок и считаем для него локальный вектор
-//			if (current_element.loc_nodes[0].num == loaded_nodes[i_node] || current_element.loc_nodes[3].num == loaded_nodes[i_node]) {
-//				Calculate_LocalLoadVector(current_element, P);
-//				if (current_element.loc_nodes[0].num == loaded_nodes[i_node])
-//					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[0];
-//				if (current_element.loc_nodes[3].num == loaded_nodes[i_node])
-//					GlobalLoadVector_block[loaded_nodes[i_node] - 1] += LocalLoadVector_block[3];
-//			}
-//		}
-//	}
-//
-//	GlobalLoadVector.resize(nodes_count * 2,0);
-//
-//	// сборка глобального вектора нагрузок в поэлементом формате
-//	for (int i = 0; i < GlobalLoadVector_block.size(); i++) {
-//		GlobalLoadVector[2 * i] = GlobalLoadVector_block[i].val1;
-//		GlobalLoadVector[2 * i + 1] = GlobalLoadVector_block[i].val2;
-//	}
-//
-//
-//
-//	// применяем условия закрепления к узлам в собранном векторе нагрузок
-//	for (int k = 0; k <fixed_nodes.size(); k++) {		
-//		for (int i = 0; i < GlobalStiffnessMatrix_block.size(); i++) {
-//			if (i == (fixed_nodes[k] - 1)) {
-//				GlobalLoadVector_block[i] = 0;		// зануляем соответствующую строку
-//			}
-//		}
-//	}
-//
-//	// применение условий закрепления к глобальному вектору нагрузок в поэлементном формате
-//	for (int k = 0; k < fixed_nodes.size(); k++) {
-//		for (int i = 0; i < GlobalLoadVector.size()/2; i++) {
-//			if (i == (fixed_nodes[k] - 1)) {
-//				GlobalLoadVector[2 * i] = 0;		// зануляем соответствующую строку
-//				GlobalLoadVector[2 * i + 1] = 0;
-//			}
-//		}
-//	}
-//
-//	cout << "Assembling Global load Vector complete\n";
-//}
 
 void FEM::AssembleGlobalLoadVector(Mesh& mesh) {
 	cout << "\nAssembling Global Load Vector...\n";
