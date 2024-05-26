@@ -9,11 +9,11 @@ Material::Material() {
 	E = 2.1e5;		// [МПа] так как вся геометрия задается в милиметрах, модуль Юнга задается в МПа
 	mu = 0.3;
 	c = E / (1 - mu * mu);
-	thickness = 3; // [мм]
+	thickness = 4; // [мм]
 }
 
 Load::Load() {
-	Px = -3;							// нагрузка, которую прикладываем к линии, [Н/мм]
+	Px = -1000;							// нагрузка, которую прикладываем к линии, [Н/мм]
 	Py = 0.0;
 }
 
@@ -827,25 +827,25 @@ void FEM::AssembleGlobalStiffnessMatrix(Mesh& mesh) {
 	// массив с закрепленными узлами можно сформировать, основываясь на совпадении координат узлов с координатами закрепленной кромки (данные берем из информации о расчетной области)
 
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		//if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
-		if (mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x) {		// здесь сравниваем x-координату узла с кривой
+		if (mesh.nodes[i].x == mesh.subdomain.coords[1].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на закрепление:
+		//if (mesh.nodes[i].x == mesh.subdomain.vertical_curves[2][0].begin.x) {		// здесь сравниваем x-координату узла с кривой
 			fixed_nodes.push_back(mesh.nodes[i]);					
-		}
-		// coords[0].x - координата левой кромки пластины
-		// coords[1].x - координата отверстия пластины
-		// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
-		if (mesh.nodes[i].x == mesh.subdomain.hole_center.x - mesh.subdomain.hole_radius && mesh.nodes[i].y == mesh.subdomain.hole_center.y)
-			fixed_nodes.push_back(mesh.nodes[i]);		// узел на краю отверстия ограничиваем по y чтобы система решалась
+		//}
+		//// coords[0].x - координата левой кромки пластины
+		//// coords[1].x - координата отверстия пластины
+		//// coords[2].x - координата оси симметрии пластины в случае осесимметричной задачи
+		//if (mesh.nodes[i].x == mesh.subdomain.hole_center.x - mesh.subdomain.hole_radius && mesh.nodes[i].y == mesh.subdomain.hole_center.y)
+		//	fixed_nodes.push_back(mesh.nodes[i]);		// узел на краю отверстия ограничиваем по y чтобы система решалась
 
 	}
 
 	// =========== Создание списка нагруженных узлов ==============
 
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		//if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
-		if (mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x) {	// сравниваем координату узла с кривой
+		if (mesh.nodes[i].x == mesh.subdomain.coords[0].x)	// если координата x узла совпадает с координатой закрепляемой кромки, то помечаем его на нагрузку:
+		//if (mesh.nodes[i].x == mesh.subdomain.vertical_curves[0][0].begin.x) {	// сравниваем координату узла с кривой
 			loaded_nodes.push_back(mesh.nodes[i].num);
-		}
+		//}
 	}
 
 
@@ -858,29 +858,29 @@ void FEM::AssembleGlobalStiffnessMatrix(Mesh& mesh) {
 			bool is_near_hole = fixed_nodes[k].x == mesh.subdomain.hole_center.x - mesh.subdomain.hole_radius && fixed_nodes[k].y == mesh.subdomain.hole_center.y;
 			// условия для защемления всех узлов на правой кромке
 
-			//// зануляем строку-столбец, отвечающий за х-перемещение узла
-			//GlobalStiffnessMatrix[fixed_node_index - 1][i] = 0;
-			//GlobalStiffnessMatrix[i][fixed_node_index - 1] = 0;
-			//// зануляем строку-столбец, отвечающий за у-перемещение узла
-			//GlobalStiffnessMatrix[fixed_node_index][i] = 0;
-			//GlobalStiffnessMatrix[i][fixed_node_index] = 0;
-			//// ставим единицы на диагонали
-			//GlobalStiffnessMatrix[fixed_node_index - 1][fixed_node_index - 1] = 1;
-			//GlobalStiffnessMatrix[fixed_node_index][fixed_node_index] = 1;
+			// зануляем строку-столбец, отвечающий за х-перемещение узла
+			GlobalStiffnessMatrix[fixed_node_index - 1][i] = 0;
+			GlobalStiffnessMatrix[i][fixed_node_index - 1] = 0;
+			// зануляем строку-столбец, отвечающий за у-перемещение узла
+			GlobalStiffnessMatrix[fixed_node_index][i] = 0;
+			GlobalStiffnessMatrix[i][fixed_node_index] = 0;
+			// ставим единицы на диагонали
+			GlobalStiffnessMatrix[fixed_node_index - 1][fixed_node_index - 1] = 1;
+			GlobalStiffnessMatrix[fixed_node_index][fixed_node_index] = 1;
 
 			// условия для ограничения х-перемещений на кромках и у перемещения на краю отверстия
 
 			// зануляем строку-столбец, отвечающий за х-перемещение узла
-			if (is_near_hole) {
-				GlobalStiffnessMatrix[fixed_node_index][i] = 0;
-				GlobalStiffnessMatrix[i][fixed_node_index] = 0;
-				GlobalStiffnessMatrix[fixed_node_index][fixed_node_index] = 1;
-			}
-			else {
-				GlobalStiffnessMatrix[fixed_node_index - 1][i] = 0;
-				GlobalStiffnessMatrix[i][fixed_node_index - 1] = 0;
-				GlobalStiffnessMatrix[fixed_node_index-1][fixed_node_index-1] = 1;
-			}
+			//if (is_near_hole) {
+			//	GlobalStiffnessMatrix[fixed_node_index][i] = 0;
+			//	GlobalStiffnessMatrix[i][fixed_node_index] = 0;
+			//	GlobalStiffnessMatrix[fixed_node_index][fixed_node_index] = 1;
+			//}
+			//else {
+			//	GlobalStiffnessMatrix[fixed_node_index - 1][i] = 0;
+			//	GlobalStiffnessMatrix[i][fixed_node_index - 1] = 0;
+			//	GlobalStiffnessMatrix[fixed_node_index-1][fixed_node_index-1] = 1;
+			//}
 
 
 		}
