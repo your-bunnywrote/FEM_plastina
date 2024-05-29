@@ -258,28 +258,28 @@ int main() {
 	fem.AssembleGlobalStiffnessMatrix(mesh);
 	fem.AssembleGlobalLoadVector(mesh);
 	
-	ofstream out;
+	//ofstream out;
 
 
-	out.open(output_folder + "\\out_stiffness_matrix.txt");
-	cout << "Printing results...\n";
+	//out.open(output_folder + "\\out_stiffness_matrix.txt");
+	//cout << "Printing results...\n";
 
-	for (int i = 0; i < fem.GlobalStiffnessMatrix.size(); i++) {
-		for (int j = 0; j < fem.GlobalStiffnessMatrix.size(); j++) {
-			out << fem.GlobalStiffnessMatrix[i][j] << "\t";
-		}
-		out << "\n";
-	}
+	//for (int i = 0; i < fem.GlobalStiffnessMatrix.size(); i++) {
+	//	for (int j = 0; j < fem.GlobalStiffnessMatrix.size(); j++) {
+	//		out << fem.GlobalStiffnessMatrix[i][j] << "\t";
+	//	}
+	//	out << "\n";
+	//}
 
 
-	out.close();
-	out.open(output_folder + "\\out_loads_vec.txt");
+	//out.close();
+	//out.open(output_folder + "\\out_loads_vec.txt");
 
-	for (int i = 0; i < fem.GlobalLoadVector.size(); i++) {
-		out << fem.GlobalLoadVector[i] << "\n";
-	}
-	cout << "Results has been printed\n";
-	out.close();
+	//for (int i = 0; i < fem.GlobalLoadVector.size(); i++) {
+	//	out << fem.GlobalLoadVector[i] << "\n";
+	//}
+	//cout << "Results has been printed\n";
+	//out.close();
 
 
 	int n = fem.GlobalStiffnessMatrix.size();
