@@ -1225,11 +1225,13 @@ void FEM::Get_X_Stresses(double* u, Mesh& mesh, string output_folder) {
 	Elemental_VonMises_Stress.resize(mesh.elements.size());
 	ofstream out_x_stress, out_y_stress, out_vonMises_stress;
 
-	ofstream x_stress_along_hole;
+	ofstream x_stress_along_hole, y_stress_along_hole, VonMises_stress_along_hole;
 	out_x_stress.open(output_folder + "\\x_normal_stress.txt");
 	out_y_stress.open(output_folder + "\\y_normal_stress.txt");
 	out_vonMises_stress.open(output_folder + "\\VonMises_stress.txt");
 	x_stress_along_hole.open(output_folder + "\\graph_data\\x_stress_data.txt");
+	y_stress_along_hole.open(output_folder + "\\graph_data\\y_stress_data.txt");
+	VonMises_stress_along_hole.open(output_folder + "\\graph_data\\VM_stress_data.txt");
 	// считаем осредненные напряжения в центрах элементов
 	for (int i = 0; i < mesh.elements.size(); i++) {
 		type = mesh.check_element_type(mesh.elements[i]);
@@ -1258,15 +1260,19 @@ void FEM::Get_X_Stresses(double* u, Mesh& mesh, string output_folder) {
 		double sigma_1 = (sigmax + sigmay) / 2. + sqrt((sigmax - sigmay) * (sigmax - sigmay) / 4. + tauxy * tauxy);
 		double sigma_2 = (sigmax + sigmay) / 2. - sqrt((sigmax - sigmay) * (sigmax - sigmay) / 4. + tauxy * tauxy);
 		Elemental_VonMises_Stress[i] = sqrt(((sigma_1 - sigma_2) * (sigma_1 - sigma_2) + sigma_2 * sigma_2 + sigma_1 * sigma_1) / 2.);
+		double VM_stress = Elemental_VonMises_Stress[i];
 
 		out_x_stress << elnum << "\t" << sigmax << endl;
 		out_y_stress << elnum << "\t" << sigmay << endl;
-		out_vonMises_stress << elnum << "\t" << Elemental_VonMises_Stress[i] << endl;
+		out_vonMises_stress << elnum << "\t" << VM_stress << endl;
 
 		// выбираем элементы слева от отверстия вдоль линии (130,y) (там возникает концентрация в углах)
 		//bool is_on_hole_line = false;
-		if (el->loc_nodes[1].x == mesh.subdomain.coords[1].x /* || el->loc_nodes[0].x == mesh.subdomain.coords[1].x */ )
+		if (el->loc_nodes[1].x == mesh.subdomain.coords[1].x /* || el->loc_nodes[0].x == mesh.subdomain.coords[1].x */) {
 			x_stress_along_hole << el->loc_nodes[1].y + (el->loc_nodes[2].y - el->loc_nodes[1].y) / 2 << "\t" << sigmax << endl;
+			y_stress_along_hole<< el->loc_nodes[1].y + (el->loc_nodes[2].y - el->loc_nodes[1].y) / 2 << "\t" << sigmay << endl;
+			VonMises_stress_along_hole << el->loc_nodes[1].y + (el->loc_nodes[2].y - el->loc_nodes[1].y) / 2 << "\t" << VM_stress << endl;
+		}
 
 		delete el;
 	}
