@@ -1268,7 +1268,7 @@ void FEM::Get_X_Stresses(double* u, Mesh& mesh, string output_folder) {
 
 		// выбираем элементы слева от отверстия вдоль линии (130,y) (там возникает концентрация в углах)
 		//bool is_on_hole_line = false;
-		if (el->loc_nodes[1].x == mesh.subdomain.coords[1].x /* || el->loc_nodes[0].x == mesh.subdomain.coords[1].x */) {
+		if (el->loc_nodes[1].x == mesh.subdomain.coords[1].x  && (el->loc_nodes[0].y < mesh.subdomain.coords[1].y || el->loc_nodes[2].y > mesh.subdomain.coords[2].y) ) {
 			x_stress_along_hole << el->loc_nodes[1].y + (el->loc_nodes[2].y - el->loc_nodes[1].y) / 2 << "\t" << sigmax << endl;
 			y_stress_along_hole<< el->loc_nodes[1].y + (el->loc_nodes[2].y - el->loc_nodes[1].y) / 2 << "\t" << sigmay << endl;
 			VonMises_stress_along_hole << el->loc_nodes[1].y + (el->loc_nodes[2].y - el->loc_nodes[1].y) / 2 << "\t" << VM_stress << endl;
