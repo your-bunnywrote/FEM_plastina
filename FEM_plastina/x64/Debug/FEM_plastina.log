@@ -1,0 +1,9 @@
+﻿  Mesh.cpp
+D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\Mesh.cpp(189,29): warning C4267: =: преобразование из "size_t" в "int"; возможна потеря данных
+D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\Mesh.cpp(389,70): warning C4267: =: преобразование из "size_t" в "_Ty"; возможна потеря данных
+D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\Mesh.cpp(389,70): warning C4267:         with
+D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\Mesh.cpp(389,70): warning C4267:         [
+D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\Mesh.cpp(389,70): warning C4267:             _Ty=int
+D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\Mesh.cpp(389,70): warning C4267:         ]
+D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\Mesh.cpp(428,78): warning C4267: =: преобразование из "size_t" в "uint32_t"; возможна потеря данных
+  FEM_plastina.vcxproj -> D:\Slava\Мага\Учеба_ФПМИ\Master_Disser\FEM_plastina\x64\Debug\FEM_plastina.exe

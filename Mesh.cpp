@@ -78,12 +78,12 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 	double phi = 0;
 	double r = subdomain.hole_radius;
 
-	int nodenum = 1;
+	int nodenum = 0;
 	int node_index = 0;
 	// располагаем узлы на основных горизонтальных кривых
 	for (int k = 0; k < subdomain.horizontal_curves.size(); k++) {
 		if (k >= 1)
-			nodenum = x_size * accumulate(ny.begin(), ny.begin() + k, 0) + 1;
+			nodenum = x_size * accumulate(ny.begin(), ny.begin() + k, 0);
 		for (int j = 0; j < subdomain.horizontal_curves[k].size(); j++) {
 			Curve current_hor_interval = subdomain.horizontal_curves[k][j];
 			sum_kx = 0;
@@ -96,7 +96,7 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 			phi = M_PI_4 / sum_kx;														// первый угловой шаг
 			x[g_index] = current_hor_interval.begin.x;
 
-			node_index = nodenum - 1;
+			node_index = nodenum;
 			nodes[node_index].x = x[g_index];
 			nodes[node_index].y = current_hor_interval.begin.y;
 			nodes[node_index].num = nodenum;
@@ -127,11 +127,11 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 		}
 	}
 
-	nodenum = 1;
+	nodenum = 0;
 	// бьем основные вертикальные интервалы
 	for (int k = 0; k < subdomain.vertical_curves.size(); k++) {
 		if (k >= 1)
-			nodenum = accumulate(nx.begin(), nx.begin() + k, 0) + 1;
+			nodenum = accumulate(nx.begin(), nx.begin() + k, 0);
 		for (int j = 0; j < subdomain.vertical_curves[k].size(); j++) {
 			Curve current_vert_interval = subdomain.vertical_curves[k][j];
 			sum_ky = 0;
@@ -144,7 +144,7 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 			y[g_index] = subdomain.vertical_curves[k][j].begin.y;
 			
 
-			node_index = nodenum - 1;
+			node_index = nodenum;
 			nodes[node_index].y = y[g_index];
 			nodes[node_index].num = nodenum;
 			for (int i = 1; i <= ny[j]; i++) {
@@ -177,7 +177,7 @@ void Mesh::calculate_coords(vector<double>& x, vector<double>& y) {
 	int j = 0;
 	int node_offset = 0;
 	for (int i = 0; i < nodes.size(); i++) {
-		if (nodes[i].num == 0) {	// первый вспомогательный узел по горизонтали на j-м вертикальном интервале
+		if (nodes[i].num == 0 && i>0) {	// первый вспомогательный узел по горизонтали на j-м вертикальном интервале
 				int node_inc = 0;
 				sum_ky = 0;
 				for (int l = 0; l < ny[j]; l++) {
@@ -340,7 +340,7 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 			for (size_t i = 0; i < x.size(); i++) {
 				mesh.nodes[i + j * x.size()].x = x[i];
 				mesh.nodes[i + j * x.size()].y = y[j];
-				mesh.nodes[i + j * x.size()].num = nodenum + 1;
+				mesh.nodes[i + j * x.size()].num = nodenum;
 				nodenum++;
 			}
 		}
@@ -359,7 +359,7 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 			mesh.elements[i + j * (x.size() - 1)].loc_nodes[3] = mesh.nodes[i + (j + 1) * x.size()];
 
 			mesh.elements[i + j * (x.size() - 1)].mat.num = 1;
-			mesh.elements[i + j * (x.size() - 1)].num = elemnum + 1;
+			mesh.elements[i + j * (x.size() - 1)].num = elemnum;
 			elemnum++;
 		}
 	}
@@ -372,20 +372,21 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 	fill(mesh.num_nodes_in_new_mesh.begin(), mesh.num_nodes_in_new_mesh.end(), 0);
 	// помечаем узлы на удаление
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
+		if(i>0)
 		is_remove_node = !mesh.subdomain.is_contain(mesh.nodes[i]);
 		if (is_remove_node) {
 			mesh.nodes[i].num = 0;
 		}
 	}
 	for (size_t i = 0; i < mesh.nodes.size(); i++) {
-		if (mesh.nodes[i].num == 0) {
+		if (mesh.nodes[i].num == 0 && i>0) {
 			removed_nodes++;
 			continue;
 		}
 		else {
 			NewMesh.nodes.push_back(mesh.nodes[i]);
 			NewMesh.nodes[NewMesh.nodes.size() - 1].num -= removed_nodes;
-			mesh.num_nodes_in_new_mesh[mesh.nodes[i].num - 1] = mesh.nodes[i].num - removed_nodes;
+			mesh.num_nodes_in_new_mesh[mesh.nodes[i].num] = mesh.nodes[i].num - removed_nodes;
 		}
 	}
 	mesh.nodes = NewMesh.nodes;
@@ -425,7 +426,7 @@ void CreateMesh(Mesh& mesh, string& filename_nodes, string& filename_elements) {
 			NewMesh.elements[NewMesh.elements.size() - 1].num -= removed_elements;
 			for (size_t j = 0; j < 4; j++) {
 				old_num_node = NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num;
-				new_num_node = mesh.num_nodes_in_new_mesh[old_num_node - 1];
+				new_num_node = mesh.num_nodes_in_new_mesh[old_num_node];
 				NewMesh.elements[NewMesh.elements.size() - 1].loc_nodes[j].num = new_num_node;
 			}
 		}
