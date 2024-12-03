@@ -1262,7 +1262,7 @@ void FEM::Get_X_Stresses(double* u, Mesh& mesh, string output_folder) {
 
 		out_x_stress << elnum << "\t" << sigmax << endl;
 		out_y_stress << elnum << "\t" << sigmay << endl;
-		out_vonMises_stress << elnum << "\t" << Elemental_VonMises_Stress[i] << endl;
+		out_vonMises_stress << elnum - 1 << "\t" << Elemental_VonMises_Stress[i] << endl;
 
 		if (el->loc_nodes[1].x == mesh.subdomain.vertical_curves[2][0].begin.x) {
 
